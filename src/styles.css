@@ -3,25 +3,11 @@
 @font-face {
   font-family: 'IRANYekanX';
   src:
-    local('IRANYekanX Light'),
-    url('/fonts/IRANYekanX-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'IRANYekanX';
-  src:
-    local('IRANYekanX Regular'),
-    url('/fonts/IRANYekanX-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'IRANYekanX';
-  src:
-    local('IRANYekanX DemiBold'),
-    url('/fonts/IRANYekanX-DemiBold.woff2') format('woff2');
-  font-weight: 600;
+    url('/fonts/IRANYekanXVF.woff2') format('woff2') tech(variations),
+    url('/fonts/IRANYekanXVF.woff2') format('woff2-variations'),
+    url('/fonts/IRANYekanXVF.woff') format('woff');
+  font-weight: 100 1000;
+  font-style: normal;
   font-display: swap;
 }
 

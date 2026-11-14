@@ -1,5 +1,6 @@
 import opentype, { type Font } from 'opentype.js';
 import type { FontIdentity } from '../state/workspace';
+import { inferWeight } from './weight';
 
 // crypto.randomUUID only exists in secure contexts (HTTPS or localhost), so the
 // app breaks when served over plain HTTP; getRandomValues works everywhere.
@@ -105,12 +106,21 @@ export async function loadFont(file: File): Promise<LoadedFont> {
     throw new Error(`فایل «${file.name}» قابل نمایش نیست.`);
   }
   document.fonts.add(face);
+  const names = parsed?.names as Record<string, Record<string, string> | undefined> | undefined;
+  const sortWeight = inferWeight({
+    typographicSubfamily: names?.typographicSubfamily?.en ?? names?.preferredSubfamily?.en,
+    names: [names?.fullName?.en, names?.postScriptName?.en, file.name, names?.fullName?.fa],
+    legacySubfamily: names?.fontSubfamily?.en,
+    weightClass: Number(parsed?.tables.os2?.usWeightClass) || undefined,
+    variableDefault: weightAxis?.defaultValue,
+  });
   return {
     id,
     family,
     face,
     parsed,
     weight,
+    sortWeight,
     axes,
     fileName: file.name,
     size: file.size,

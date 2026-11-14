@@ -35,7 +35,7 @@ export type AppDefaults = z.infer<typeof defaultsSchema>;
 export function createFactoryDefaults(): AppDefaults {
   return {
     version: 1,
-    theme: 'system',
+    theme: 'light',
     tabs: Object.fromEntries(
       tabIds.map((id) => [
         id,

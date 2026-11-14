@@ -18,13 +18,42 @@ export type IconName =
   | 'chevron'
   | 'empty-fonts'
   | 'add';
+/** Intrinsic sizes of the SVGs in public/design. */
+const iconSizes: Record<IconName, [number, number]> = {
+  logo: [65, 32],
+  sun: [48, 48],
+  moon: [24, 24],
+  gear: [24, 24],
+  info: [24, 24],
+  collapse: [24, 24],
+  close: [12, 12],
+  eye: [12, 12],
+  'eye-closed': [12, 12],
+  grip: [6, 10],
+  sort: [16, 16],
+  play: [24, 24],
+  pause: [48, 48],
+  reset: [24, 24],
+  chevron: [16, 16],
+  'empty-fonts': [93, 100],
+  add: [24, 24],
+};
+/**
+ * Single-colour icons are drawn as CSS masks filled with currentColor so each
+ * theme can colour them; the multi-tone illustration stays an image.
+ */
 export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
+  const src = `/design/${name}.svg`;
+  if (name === 'empty-fonts')
+    return (
+      <img src={src} alt="" draggable={false} className={`design-icon icon-${name} ${className}`} />
+    );
+  const [width, height] = iconSizes[name];
   return (
-    <img
-      src={`/design/${name}.svg`}
-      alt=""
-      draggable={false}
-      className={`design-icon icon-${name} ${className}`}
+    <span
+      aria-hidden="true"
+      className={`design-icon mask-icon icon-${name} ${className}`}
+      style={{ width, height, maskImage: `url(${src})`, WebkitMaskImage: `url(${src})` }}
     />
   );
 }

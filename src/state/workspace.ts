@@ -10,6 +10,8 @@ export interface FontIdentity {
   id: string;
   name: string;
   weight: number;
+  /** Weight used for ordering; inferred from style names when OS/2 is unreliable. */
+  sortWeight?: number;
 }
 export interface TabSession {
   order: string[];
@@ -118,8 +120,12 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         action.visibleOrder.every((id) => tab.order.includes(id))
           ? action.visibleOrder
           : tab.order;
+      // Dropping onto a row takes that row's slot: moving down lands after it,
+      // moving up lands before it. Otherwise a one-step move down is a no-op
+      // and the last slot is unreachable.
+      const movingDown = source.indexOf(action.id) < source.indexOf(action.before);
       const order = source.filter((id) => id !== action.id);
-      order.splice(order.indexOf(action.before), 0, action.id);
+      order.splice(order.indexOf(action.before) + (movingDown ? 1 : 0), 0, action.id);
       next = { ...tab, order, sort: 'manual' };
       break;
     }
@@ -163,6 +169,8 @@ export function orderedFonts<T extends FontIdentity>(fonts: T[], tab: TabSession
   return ordered.sort(
     (a, b) =>
       direction *
-      (tab.sort.startsWith('weight') ? a.weight - b.weight : a.name.localeCompare(b.name, 'fa')),
+      (tab.sort.startsWith('weight')
+        ? (a.sortWeight ?? a.weight) - (b.sortWeight ?? b.weight)
+        : a.name.localeCompare(b.name, 'fa')),
   );
 }

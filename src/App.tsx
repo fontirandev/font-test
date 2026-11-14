@@ -9,13 +9,15 @@ import { Sidebar } from './components/Sidebar';
 import { TestViews } from './components/TestViews';
 import { SettingsDialog } from './components/SettingsDialog';
 import { DesignSystem } from './components/DesignSystem';
+import { readStoredTheme, resolveTheme, storeTheme } from './lib/theme';
 
 function useTheme(theme: AppDefaults['theme']) {
-  const [resolved, setResolved] = useState<'light' | 'dark'>('light');
+  const [resolved, setResolved] = useState<'light' | 'dark'>(() => resolveTheme(theme));
   useEffect(() => {
+    storeTheme(theme);
     const query = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
-      const value = theme === 'system' ? (query.matches ? 'dark' : 'light') : theme;
+      const value = resolveTheme(theme);
       document.documentElement.dataset.theme = value;
       setResolved(value);
     };
@@ -65,7 +67,8 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [modal, setModal] = useState<'settings' | 'about' | 'design-system' | null>(null);
-  const [theme, setTheme] = useState(defaults.theme);
+  // A theme picked in this browser outlives reloads; saved defaults apply otherwise.
+  const [theme, setTheme] = useState(() => readStoredTheme() ?? defaults.theme);
   const input = useRef<HTMLInputElement>(null);
   const fontRef = useRef<LoadedFont[]>([]);
   const importing = useRef(false);
@@ -158,9 +161,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
             <IconButton
               icon={resolvedTheme === 'dark' ? 'sun' : 'moon'}
               label="تغییر پوسته روشن و تاریک"
-              onClick={() =>
-                setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
-              }
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             />
             <IconButton icon="gear" label="تنظیمات پیش‌فرض" onClick={() => setModal('settings')} />
           </div>

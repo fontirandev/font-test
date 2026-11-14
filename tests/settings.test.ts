@@ -48,7 +48,7 @@ test('settings API enforces same-origin, rejects malformed/session payloads, and
     assert.equal((await save(JSON.stringify({ ...defaults, fonts: [] }))).status, 400);
     assert.equal((await save(JSON.stringify(defaults), origin, 'text/plain')).status, 415);
     assert.equal((await save('x'.repeat(70 * 1024))).status, 413);
-    assert.equal(repository.read().theme, 'system');
+    assert.equal(repository.read().theme, 'light');
     assert.equal((await save(JSON.stringify(defaults))).status, 200);
     assert.equal((await (await fetch(origin)).json()).theme, 'dark');
   } finally {

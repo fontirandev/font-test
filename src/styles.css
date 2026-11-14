@@ -66,6 +66,11 @@
   --active: #e5fffc;
   --disabled: var(--grey-100);
   --danger: #b42318;
+  /* Icons are masks filled with these, so they follow the theme. */
+  --icon: var(--grey-900);
+  --icon-muted: var(--grey-400);
+  --icon-subtle: var(--grey-500);
+  --icon-faint: var(--grey-300);
   color-scheme: light;
 }
 :root[data-theme='dark'] {
@@ -85,6 +90,10 @@
   --active: #07332f;
   --disabled: var(--grey-900);
   --danger: #ff938a;
+  --icon: var(--grey-100);
+  --icon-muted: var(--grey-400);
+  --icon-subtle: var(--grey-400);
+  --icon-faint: var(--grey-600);
   color-scheme: dark;
 }
 @layer base {
@@ -164,6 +173,32 @@
     display: block;
     flex-shrink: 0;
     max-width: none;
+    color: var(--icon);
+  }
+  .mask-icon {
+    background-color: currentColor;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+  }
+  .icon-logo {
+    color: var(--ink);
+  }
+  .icon-gear,
+  .icon-grip,
+  .icon-info,
+  .icon-moon,
+  .icon-sun {
+    color: var(--icon-muted);
+  }
+  .icon-reset {
+    color: var(--icon-subtle);
+  }
+  .icon-collapse {
+    color: var(--icon-faint);
+  }
+  .button-primary .design-icon {
+    color: var(--on-primary);
   }
   .topbar {
     height: 64px;
@@ -287,6 +322,18 @@
   .font-row[data-active='true'] {
     border-color: var(--accent);
     background: var(--active);
+  }
+  .font-row[draggable='true'] {
+    cursor: grab;
+  }
+  .font-row[data-dragging] {
+    opacity: 0.4;
+  }
+  .font-row[data-drop='before'] {
+    box-shadow: 0 -2px 0 var(--accent);
+  }
+  .font-row[data-drop='after'] {
+    box-shadow: 0 2px 0 var(--accent);
   }
   .section-heading .icon-button {
     width: 24px;
@@ -704,8 +751,8 @@
     display: none;
   }
 }
-:root[data-theme='dark'] .design-icon:not(.icon-empty-fonts) {
-  filter: invert(1) hue-rotate(180deg);
+:root[data-theme='dark'] .icon-empty-fonts {
+  filter: invert(0.88) hue-rotate(180deg);
 }
 @media (max-width: 1100px) {
   .tab-rail {

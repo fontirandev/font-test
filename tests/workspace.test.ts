@@ -4,6 +4,7 @@ import { createFactoryDefaults, normalizeDefaults } from '../shared/settings';
 import { supportsControl, tabIds } from '../shared/tabs';
 import { createWorkspace, orderedFonts, workspaceReducer } from '../src/state/workspace';
 import { featureCSS, variationCSS } from '../src/lib/fonts';
+import { inferWeight } from '../src/lib/weight';
 
 const fonts = [
   { id: 'a', name: 'A', weight: 700 },
@@ -111,4 +112,39 @@ test('variable axes are clamped independently to each font range', () => {
     ]),
     '"wght" 700',
   );
+});
+test('dragging down onto the next row moves past it, so the last slot is reachable', () => {
+  let state = workspaceReducer(setup(), {
+    type: 'move-font',
+    tab: 'weights',
+    id: 'a',
+    before: 'b',
+  });
+  assert.deepEqual(state.tabs.weights.order, ['b', 'a']);
+  state = workspaceReducer(state, { type: 'move-font', tab: 'weights', id: 'a', before: 'b' });
+  assert.deepEqual(state.tabs.weights.order, ['a', 'b']);
+});
+test('weight sort prefers the inferred style weight over OS/2', () => {
+  const fonts = [
+    { id: 'x', name: 'X Black', weight: 400, sortWeight: 900 },
+    { id: 'y', name: 'Y Light', weight: 400, sortWeight: 300 },
+    { id: 'z', name: 'Z', weight: 500 },
+  ];
+  const tab = { ...setup().tabs.weights, order: ['x', 'y', 'z'], sort: 'weight-asc' as const };
+  assert.deepEqual(
+    orderedFonts(fonts, tab).map((font) => font.id),
+    ['y', 'z', 'x'],
+  );
+});
+test('weight inference reads style names before a misleading usWeightClass', () => {
+  assert.equal(inferWeight({ names: ['Vazir-ExtraBold.ttf'], weightClass: 400 }), 800);
+  assert.equal(inferWeight({ names: ['IRANYekanX-DemiBold.woff2'], weightClass: 400 }), 600);
+  assert.equal(inferWeight({ names: ['Font ExtraLight'], weightClass: 400 }), 200);
+  assert.equal(inferWeight({ names: ['فونت فوق‌ضخیم'] }), 800);
+  assert.equal(
+    inferWeight({ names: ['Family Light'], legacySubfamily: 'Regular', weightClass: 400 }),
+    300,
+  );
+  assert.equal(inferWeight({ names: ['Plain.ttf'], weightClass: 7 }), 700);
+  assert.equal(inferWeight({ names: ['Var.ttf'], variableDefault: 350 }), 350);
 });

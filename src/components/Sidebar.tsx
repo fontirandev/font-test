@@ -25,10 +25,21 @@ export function Sidebar({
   openFilePicker: () => void;
 }) {
   const [dragging, setDragging] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const canReorder = !loading && fonts.length > 1;
   const [filesOpen, setFilesOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const sorted = orderedFonts(fonts, tab);
   const activeCount = fonts.filter((font) => tab.active[font.id]).length;
+  const move = (id: string, before: string) =>
+    dispatch({
+      type: 'move-font',
+      tab: tabId,
+      visibleOrder: sorted.map((font) => font.id),
+      id,
+      before,
+    });
   return (
     <aside className="sidebar" aria-label="فونت‌ها و تنظیمات تب">
       <div className="section-heading">
@@ -82,24 +93,45 @@ export function Sidebar({
                 }
               >
                 <Icon name="sort" />
-                Sort by weight{tab.sort === 'weight-desc' ? ' ↓' : ''}
+                Sort by weight
+                {tab.sort === 'weight-asc' ? ' ↑' : tab.sort === 'weight-desc' ? ' ↓' : ''}
               </Button>
               <div className="mb-[5px] space-y-[5px]">
                 {sorted.map((font, index) => (
                   <div
                     className="font-row"
                     data-active={tab.active[font.id]}
+                    data-dragging={draggedId === font.id || undefined}
+                    data-drop={
+                      dropTarget === font.id && draggedId && draggedId !== font.id
+                        ? sorted.findIndex((f) => f.id === draggedId) < index
+                          ? 'after'
+                          : 'before'
+                        : undefined
+                    }
                     key={font.id}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
+                    draggable={canReorder}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', font.id);
+                      setDraggedId(font.id);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedId(null);
+                      setDropTarget(null);
+                    }}
+                    onDragOver={(e) => {
+                      if (!draggedId) return;
                       e.preventDefault();
-                      dispatch({
-                        type: 'move-font',
-                        tab: tabId,
-                        visibleOrder: sorted.map((font) => font.id),
-                        id: e.dataTransfer.getData('text/font-desk-id'),
-                        before: font.id,
-                      });
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dropTarget !== font.id) setDropTarget(font.id);
+                    }}
+                    onDrop={(e) => {
+                      if (!draggedId) return;
+                      e.preventDefault();
+                      move(draggedId, font.id);
+                      setDraggedId(null);
+                      setDropTarget(null);
                     }}
                   >
                     <IconButton
@@ -124,30 +156,12 @@ export function Sidebar({
                       className="font-grip"
                       aria-label={`جابجایی ${font.fileName}`}
                       title="بکشید یا با کلیدهای بالا و پایین جابجا کنید"
-                      draggable={!loading}
-                      disabled={loading || fonts.length < 2}
-                      onDragStart={(e) => e.dataTransfer.setData('text/font-desk-id', font.id)}
+                      disabled={!canReorder}
                       onKeyDown={(e) => {
                         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
                         e.preventDefault();
                         const target = sorted[index + (e.key === 'ArrowUp' ? -1 : 1)];
-                        if (!target) return;
-                        if (e.key === 'ArrowUp')
-                          dispatch({
-                            type: 'move-font',
-                            tab: tabId,
-                            visibleOrder: sorted.map((font) => font.id),
-                            id: font.id,
-                            before: target.id,
-                          });
-                        else
-                          dispatch({
-                            type: 'move-font',
-                            tab: tabId,
-                            visibleOrder: sorted.map((font) => font.id),
-                            id: target.id,
-                            before: font.id,
-                          });
+                        if (target) move(font.id, target.id);
                       }}
                     >
                       <Icon name="grip" />

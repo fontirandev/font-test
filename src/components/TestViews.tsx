@@ -38,6 +38,11 @@ function downloadJson(name: string, data: unknown) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Width that fits four joining forms of one letter at the tab's font size (pt → px). */
+function joiningCellWidth(tab: TabSession): number {
+  return Math.ceil(tab.controls.fontSize * (4 / 3) * 10 + 16);
+}
+
 export function TestViews({
   tabId,
   tab,
@@ -300,12 +305,20 @@ export function TestViews({
               </>
             )}
             {tabId === 'connections' && (
-              <div className="glyph-grid">
+              <div
+                className="glyph-grid"
+                // Four joining forms per cell stay on one line, so cells widen with the font size.
+                style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${joiningCellWidth(tab)}px, 1fr))` }}
+              >
                 {persianAlphabet.map((char) => (
                   <div className="glyph-cell" key={char}>
-                    <span
-                      style={style}
-                    >{`${char} ${char}${letter} ${letter}${char}${letter} ${letter}${char}`}</span>
+                    <span className="joining-forms" style={style}>
+                      {[char, `${char}${letter}`, `${letter}${char}${letter}`, `${letter}${char}`].map(
+                        (form) => (
+                          <span key={form}>{form}</span>
+                        ),
+                      )}
+                    </span>
                     <small>{char}</small>
                   </div>
                 ))}

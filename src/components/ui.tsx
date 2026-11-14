@@ -85,6 +85,7 @@ export function Slider({
   max,
   step = 1,
   unit,
+  compact = false,
   disabled = false,
   onChange,
 }: {
@@ -94,15 +95,17 @@ export function Slider({
   max: number;
   step?: number;
   unit?: string;
+  /** Smaller muted label, used for variable axes. */
+  compact?: boolean;
   disabled?: boolean;
   onChange: (value: number) => void;
 }) {
   const id = useId();
   return (
-    <div className="slider-control" dir="ltr">
+    <div className={`slider-control ${compact ? 'compact' : ''}`} dir="ltr">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={id}>{label}</label>
-        <div className="number-box">
+        <div className={`number-box ${unit ? 'has-unit' : ''}`}>
           <input
             aria-label={`${label} value`}
             type="number"

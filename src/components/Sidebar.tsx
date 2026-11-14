@@ -71,7 +71,7 @@ export function Sidebar({
           {fonts.length > 0 && (
             <div className="mt-3" dir="ltr">
               <Button
-                className="mb-[5px] h-6 min-h-0 border border-[var(--border-control)] bg-canvas px-[7px] text-[11px] font-light"
+                className="mb-[5px] h-6 min-h-0 gap-[7px] border border-[var(--border-control)] bg-canvas pr-[3px] pl-[7px] text-[11px] font-light tracking-[0.01em]"
                 disabled={fonts.length < 2 || loading}
                 onClick={() =>
                   dispatch({
@@ -84,7 +84,7 @@ export function Sidebar({
                 <Icon name="sort" />
                 Sort by weight{tab.sort === 'weight-desc' ? ' ↓' : ''}
               </Button>
-              <div className="space-y-[5px]">
+              <div className="mb-[5px] space-y-[5px]">
                 {sorted.map((font, index) => (
                   <div
                     className="font-row"

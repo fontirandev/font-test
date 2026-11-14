@@ -42,6 +42,13 @@ const mime: Record<string, string> = {
   '.ttf': 'font/ttf',
 };
 
+const pagePolicy =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
+// A worker runs under the CSP of its own script response. The WOFF2 decoder's
+// Emscripten glue needs eval, so only that byte-in/byte-out worker may use it.
+const WOFF2_WORKER = /^\/assets\/woff2\.worker-[\w-]+\.js$/;
+const workerPolicy = "default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'";
+
 server.on('request', (request, response) => {
   void (async () => {
     if (!isLocalRequest(request, port)) {
@@ -81,7 +88,7 @@ server.on('request', (request, response) => {
       response.setHeader('Content-Type', mime[extname(path)] ?? 'application/octet-stream');
       response.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        WOFF2_WORKER.test(url.pathname) ? workerPolicy : pagePolicy,
       );
       response.end(request.method === 'HEAD' ? undefined : content);
     } catch {

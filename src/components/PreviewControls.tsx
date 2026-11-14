@@ -4,19 +4,44 @@ import type { TabSession } from '../state/workspace';
 import type { LoadedFont } from '../lib/fonts';
 import { Slider, Toggle } from './ui';
 
+/**
+ * Optional (discretionary) OpenType features a designer turns on or off while testing.
+ * Required shaping features (ccmp, locl, init, medi, fina, rlig, mark, mkmk, …) are
+ * always applied by the browser, so they are not offered as toggles.
+ */
 const featureLabels: Record<string, string> = {
   liga: 'Standard ligatures',
   dlig: 'Rare ligatures',
   calt: 'Contextual alternates',
   kern: 'Kerning',
-  mark: 'Mark positioning',
-  mkmk: 'Mark to mark',
-  rlig: 'Required ligatures',
+  salt: 'Stylistic alternates',
+  swsh: 'Swash',
+  frac: 'Fractions',
+  lnum: 'Lining figures',
+  onum: 'Oldstyle figures',
+  pnum: 'Proportional figures',
+  tnum: 'Tabular figures',
+  zero: 'Slashed zero',
+  sups: 'Superscript',
+  subs: 'Subscript',
+  ordn: 'Ordinals',
+  case: 'Case-sensitive forms',
+  smcp: 'Small capitals',
+  c2sc: 'Capitals to small capitals',
 };
+/** Features browsers enable unless told otherwise. */
+const onByDefault = new Set(['liga', 'calt', 'kern', 'clig']);
+const isStylisticSet = (tag: string) => /^ss\d\d$/.test(tag);
+const isCharacterVariant = (tag: string) => /^cv\d\d$/.test(tag);
+
+export function isToggleableFeature(tag: string): boolean {
+  return tag in featureLabels || isStylisticSet(tag) || isCharacterVariant(tag);
+}
+
 export function featureLabel(tag: string): string {
-  return /^ss\d\d$/.test(tag)
-    ? `Stylistic set ${Number(tag.slice(2))}`
-    : (featureLabels[tag] ?? tag);
+  if (isStylisticSet(tag)) return `Stylistic set ${Number(tag.slice(2))}`;
+  if (isCharacterVariant(tag)) return `Character variant ${Number(tag.slice(2))}`;
+  return featureLabels[tag] ?? tag;
 }
 
 export function PreviewControls({
@@ -33,7 +58,9 @@ export function PreviewControls({
   disabled?: boolean;
 }) {
   const active = fonts.filter((font) => tab.active[font.id]);
-  const features = [...new Set(active.flatMap((font) => font.features))];
+  const features = [...new Set(active.flatMap((font) => font.features))].filter(
+    isToggleableFeature,
+  );
   const axes = active.flatMap((font) =>
     font.axes.map((axis) => ({ ...axis, fontName: font.name })),
   );
@@ -43,7 +70,7 @@ export function PreviewControls({
   return (
     <div dir="ltr">
       {permitted('fontSize') && (
-        <div className="control-section min-h-[84px]">
+        <div className="control-section size-section">
           <Slider
             label="Font size"
             min={8}
@@ -57,7 +84,7 @@ export function PreviewControls({
       )}
       {permitted('features') &&
         [false, true].map((stylistic) => {
-          const tags = features.filter((tag) => /^ss\d\d$/.test(tag) === stylistic);
+          const tags = features.filter((tag) => isStylisticSet(tag) === stylistic);
           return (
             tags.length > 0 && (
               <section className="control-section" key={String(stylistic)}>
@@ -66,22 +93,7 @@ export function PreviewControls({
                   <Toggle
                     key={tag}
                     label={featureLabel(tag)}
-                    checked={
-                      c.features[tag] ??
-                      [
-                        'liga',
-                        'calt',
-                        'kern',
-                        'mark',
-                        'mkmk',
-                        'rlig',
-                        'ccmp',
-                        'locl',
-                        'init',
-                        'medi',
-                        'fina',
-                      ].includes(tag)
-                    }
+                    checked={c.features[tag] ?? onByDefault.has(tag)}
                     disabled={disabled}
                     onChange={(value) => onChange({ features: { ...c.features, [tag]: value } })}
                   />
@@ -93,7 +105,7 @@ export function PreviewControls({
       {permitted('axes') && uniqueAxes.length > 0 && (
         <section className="control-section">
           <h3>Variable</h3>
-          <div className="space-y-4">
+          <div className="axis-list">
             {uniqueAxes.map((axis) => {
               const matching = axes.filter((a) => a.tag === axis.tag);
               const min = Math.min(...matching.map((a) => a.min));
@@ -102,6 +114,7 @@ export function PreviewControls({
                 <Slider
                   key={axis.tag}
                   label={axis.name}
+                  compact
                   min={min}
                   max={max}
                   step={0.1}

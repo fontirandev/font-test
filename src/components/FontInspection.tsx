@@ -75,7 +75,7 @@ export function Glyphs({ font, size }: { font: LoadedFont; size: number }) {
               >
                 <path d={g.getPath(0, 0, parsed.unitsPerEm).toPathData(2)} fill="currentColor" />
               </svg>
-              <small>{g.name ?? `#${index}`}</small>
+              <small title={g.name ?? undefined}>{g.name ?? `#${index}`}</small>
               <small>#{index}</small>
             </button>
           );
@@ -116,8 +116,19 @@ export function Metadata({ font }: { font: LoadedFont }) {
     ['Descender', String(parsed.descender)],
     ['Weight', String(font.weight)],
     ['OpenType features', font.features.join(', ') || '—'],
+    ...(font.axes.length
+      ? [
+          [
+            'Variable axes',
+            font.axes
+              .map((a) => `${a.tag} (${a.name}) ${a.min}–${a.max}, default ${a.defaultValue}`)
+              .join(' · '),
+          ] as [string, string],
+        ]
+      : []),
     ...Object.entries(parsed.names).map(([name, value]): [string, string] => [
-      name,
+      // IDs 256+ are font-specific strings, such as stylistic set names.
+      /^\d+$/.test(name) ? `Name ID ${name}` : name,
       value.fa ?? value.en ?? Object.values(value).join(' / '),
     ]),
   ];

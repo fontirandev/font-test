@@ -46,7 +46,7 @@ Automatic typing with play/pause and speed control; live typing; variable/static
 
 Feature and axis controls are discovered from selected fonts. Explicitly turning a feature off emits `0` rather than falling back to browser defaults. Axis values are clamped to each font's supported range. Metadata and raw glyph views do not display text-shaping controls.
 
-TTF, OTF, WOFF and WOFF2 files can render when supported by the browser. The current OpenType inspector cannot decode WOFF2 and some newer font formats. Such fonts remain usable for previews but clearly report that metadata, coverage, glyph inspection, features, and QA are unavailable. Use an equivalent TTF/OTF for those inspection tools. QA checks structural declarations, not visual correctness; feature presence is not a shaping test.
+TTF, OTF, WOFF and WOFF2 files are rendered by the browser and inspected locally. WOFF2 is decompressed in a Web Worker with a bundled WebAssembly decoder, started only when a WOFF2 file is opened. The decoder's glue code needs `eval`, so the server relaxes the CSP for that worker script alone; the page itself keeps a strict policy. Fonts the inspector cannot parse remain usable for previews but clearly report that metadata, coverage, glyph inspection, features, and QA are unavailable. QA checks structural declarations, not visual correctness; feature presence is not a shaping test.
 
 ## Design and typography
 

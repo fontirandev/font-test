@@ -49,6 +49,30 @@ export function readAxes(font: Font): VariationAxis[] {
   }));
 }
 
+const isWoff2 = (bytes: ArrayBuffer) =>
+  bytes.byteLength >= 4 && new DataView(bytes).getUint32(0) === 0x774f4632; // 'wOF2'
+
+/** opentype.js reads TTF, OTF and WOFF but not WOFF2, so WOFF2 is decompressed first. */
+async function toSfnt(bytes: ArrayBuffer): Promise<ArrayBuffer> {
+  return isWoff2(bytes) ? decompressWoff2(bytes.slice(0)) : bytes.slice(0);
+}
+
+function decompressWoff2(bytes: ArrayBuffer): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./woff2.worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = ({ data }: MessageEvent<ArrayBuffer | null>) => {
+      worker.terminate();
+      if (data) resolve(data);
+      else reject(new Error('WOFF2 could not be decompressed'));
+    };
+    worker.onerror = () => {
+      worker.terminate();
+      reject(new Error('WOFF2 decoder failed to start'));
+    };
+    worker.postMessage(bytes, [bytes]);
+  });
+}
+
 /** File bytes are read and rendered in this browser only. No upload endpoint exists. */
 export async function loadFont(file: File): Promise<LoadedFont> {
   if (!/\.(otf|ttf|woff2?)$/i.test(file.name)) throw new Error('فرمت مجاز: OTF، TTF، WOFF و WOFF2');
@@ -56,7 +80,7 @@ export async function loadFont(file: File): Promise<LoadedFont> {
   const bytes = await file.arrayBuffer();
   let parsed: Font | null = null;
   try {
-    parsed = opentype.parse(bytes.slice(0));
+    parsed = opentype.parse(await toSfnt(bytes));
   } catch {
     /* Browser rendering may support formats the inspector does not. */
   }

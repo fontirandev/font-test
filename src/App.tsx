@@ -102,7 +102,12 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
     setMessage('');
     const added: LoadedFont[] = [];
     const errors: string[] = [];
+    // Same file name and byte size counts as a duplicate; skip it silently.
+    const seen = new Set(fontRef.current.map((font) => `${font.fileName}\0${font.size}`));
     for (const file of files) {
+      const key = `${file.name}\0${file.size}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       try {
         const font = await loadFont(file);
         if (!alive.current) {

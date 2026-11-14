@@ -182,6 +182,10 @@
   }
   .icon-collapse {
     color: var(--icon-faint);
+    transition: transform 220ms ease;
+  }
+  [aria-expanded='false'] > .icon-collapse {
+    transform: rotate(180deg);
   }
   .button-primary .design-icon {
     color: var(--on-primary);
@@ -228,6 +232,13 @@
     align-items: center;
     gap: 6px;
     font-size: 12px;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+  .tab:hover:not([aria-selected='true']) {
+    background: color-mix(in srgb, var(--panel) 55%, transparent);
+    color: var(--strong);
   }
   .tab[aria-selected='true'] {
     background: var(--panel);
@@ -249,11 +260,28 @@
   .sidebar {
     overflow-y: auto;
     scrollbar-width: none;
+    padding-bottom: 120px;
     background: var(--panel);
     box-shadow: inset 1px 0 var(--line);
   }
   .sidebar::-webkit-scrollbar {
     display: none;
+  }
+  .collapsible {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition:
+      grid-template-rows 220ms ease,
+      opacity 180ms ease;
+  }
+  .collapsible[data-open='false'] {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  .collapsible-inner {
+    min-height: 0;
+    overflow: hidden;
   }
   .section-heading {
     height: 38px;
@@ -293,10 +321,20 @@
     gap: 5px;
     padding: 0 5px 0 4px;
     cursor: pointer;
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease;
+  }
+  .font-row:hover {
+    border-color: var(--border-control);
+    background: var(--panel);
   }
   .font-row[data-active='true'] {
     border-color: var(--accent);
     background: var(--active);
+  }
+  .font-row[data-active='true']:hover {
+    background: color-mix(in srgb, var(--active) 70%, var(--accent));
   }
   .font-row[draggable='true'] {
     cursor: grab;
@@ -314,6 +352,13 @@
     width: 24px;
     height: 24px;
     padding: 0;
+    transition: background-color 150ms ease;
+  }
+  .section-heading .icon-button:hover {
+    background: var(--control);
+  }
+  .section-heading .icon-button:hover .icon-collapse {
+    color: var(--icon-subtle);
   }
   .font-row .icon-button {
     height: 18px;
@@ -444,6 +489,14 @@
     font-size: 10px;
     font-weight: 300;
     gap: 8px;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+  .toggle-row:not(.is-disabled):hover {
+    background: var(--canvas);
+    color: var(--strong);
   }
   .toggle-row + .toggle-row {
     margin-top: 5px;

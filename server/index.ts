@@ -3,7 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SettingsRepository } from './settings-repository';
-import { handleSettingsApi, isLocalRequest } from './settings-api';
+import { allowedHosts, handleSettingsApi, isAllowedHost } from './settings-api';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const port = Number(process.env.PORT ?? 5173);
@@ -11,6 +11,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error('PORT must be between 1 and 65535');
 // HOST stays loopback by default; Docker sets 0.0.0.0 and publishes the port on loopback only.
 const host = process.env.HOST ?? '127.0.0.1';
+// Comma-separated Host headers to accept besides localhost, e.g. "203.0.113.5:8030".
+const hosts = allowedHosts(port, process.env.FONT_DESK_ALLOWED_HOSTS);
 const development = process.argv.includes('--dev');
 const dataDirectory = resolve(process.env.FONT_DESK_DATA_DIR ?? resolve(root, '.data'));
 await mkdir(dataDirectory, { recursive: true, mode: 0o700 });
@@ -51,8 +53,8 @@ const workerPolicy = "default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-
 
 server.on('request', (request, response) => {
   void (async () => {
-    if (!isLocalRequest(request, port)) {
-      response.writeHead(403).end('Local access only');
+    if (!isAllowedHost(request, hosts)) {
+      response.writeHead(403).end('Host not allowed. Add it to FONT_DESK_ALLOWED_HOSTS.');
       return;
     }
     response.setHeader('X-Content-Type-Options', 'nosniff');

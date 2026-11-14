@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+# Optional local settings (see .env.example); Docker Compose reads the same file.
+-include .env
 PORT ?= 8030
 export PORT
 

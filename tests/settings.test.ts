@@ -57,3 +57,16 @@ test('settings API enforces same-origin, rejects malformed/session payloads, and
     repository.close();
   }
 });
+
+test('only loopback and explicitly configured hosts are allowed', async () => {
+  const { allowedHosts, isAllowedHost } = await import('../server/settings-api');
+  const hosts = allowedHosts(8030, ' 203.0.113.5:8030 , Fonts.Example.com ');
+  const request = (host?: string) => ({ headers: { host } }) as never;
+  assert.ok(isAllowedHost(request('localhost:8030'), hosts));
+  assert.ok(isAllowedHost(request('203.0.113.5:8030'), hosts));
+  assert.ok(isAllowedHost(request('fonts.example.com'), hosts));
+  assert.equal(isAllowedHost(request('203.0.113.5:9999'), hosts), false);
+  assert.equal(isAllowedHost(request('evil.example'), hosts), false);
+  assert.equal(isAllowedHost(request(undefined), hosts), false);
+  assert.equal(allowedHosts(8030).size, 2);
+});

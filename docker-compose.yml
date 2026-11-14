@@ -1,7 +1,8 @@
 # Base service definition. Use with docker-compose.local.yml or docker-compose.prod.yml (see Makefile).
+# Settings come from the shell or a .env file next to this file (see .env.example).
 #
-# The server checks that the Host header is 127.0.0.1:<PORT> or localhost:<PORT>,
-# so the published host port must equal the container port.
+# The server only answers Host headers it knows: localhost/127.0.0.1 on PORT plus
+# FONT_DESK_ALLOWED_HOSTS. The published host port must therefore equal the container port.
 name: font-desk
 
 services:
@@ -10,9 +11,11 @@ services:
       HOST: 0.0.0.0
       PORT: ${PORT:-8030}
       FONT_DESK_DATA_DIR: /data
+      FONT_DESK_ALLOWED_HOSTS: ${FONT_DESK_ALLOWED_HOSTS:-}
     ports:
-      # Published on loopback only: Font Desk is a local, single-user tool.
-      - '127.0.0.1:${PORT:-8030}:${PORT:-8030}'
+      # Loopback only by default. Set BIND_ADDRESS=0.0.0.0 to publish publicly; note that
+      # Docker-published ports bypass ufw, so the host firewall does not protect them.
+      - '${BIND_ADDRESS:-127.0.0.1}:${PORT:-8030}:${PORT:-8030}'
     volumes:
       - font_desk_data:/data
 

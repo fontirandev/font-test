@@ -12,8 +12,20 @@ function json(response: ServerResponse, status: number, data: unknown): void {
   response.end(JSON.stringify(data));
 }
 
-export function isLocalRequest(request: IncomingMessage, port: number): boolean {
-  return [`127.0.0.1:${port}`, `localhost:${port}`].includes(request.headers.host ?? '');
+/** Host headers the server answers: loopback on its port, plus any explicitly configured. */
+export function allowedHosts(port: number, extra = ''): Set<string> {
+  return new Set([
+    `127.0.0.1:${port}`,
+    `localhost:${port}`,
+    ...extra
+      .split(',')
+      .map((host) => host.trim().toLowerCase())
+      .filter(Boolean),
+  ]);
+}
+
+export function isAllowedHost(request: IncomingMessage, hosts: Set<string>): boolean {
+  return hosts.has((request.headers.host ?? '').toLowerCase());
 }
 
 export async function handleSettingsApi(

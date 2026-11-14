@@ -1,50 +1,15 @@
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { iconSizes, iconSrc, imageIcon, type IconName } from '../lib/icons';
 
-export type IconName =
-  | 'logo'
-  | 'sun'
-  | 'moon'
-  | 'gear'
-  | 'info'
-  | 'collapse'
-  | 'close'
-  | 'eye'
-  | 'eye-closed'
-  | 'grip'
-  | 'sort'
-  | 'play'
-  | 'pause'
-  | 'reset'
-  | 'chevron'
-  | 'empty-fonts'
-  | 'add';
-/** Intrinsic sizes of the SVGs in public/design. */
-const iconSizes: Record<IconName, [number, number]> = {
-  logo: [65, 32],
-  sun: [48, 48],
-  moon: [24, 24],
-  gear: [24, 24],
-  info: [24, 24],
-  collapse: [24, 24],
-  close: [12, 12],
-  eye: [12, 12],
-  'eye-closed': [12, 12],
-  grip: [6, 10],
-  sort: [16, 16],
-  play: [24, 24],
-  pause: [48, 48],
-  reset: [24, 24],
-  chevron: [16, 16],
-  'empty-fonts': [93, 100],
-  add: [24, 24],
-};
+export type { IconName };
+
 /**
  * Single-colour icons are drawn as CSS masks filled with currentColor so each
  * theme can colour them; the multi-tone illustration stays an image.
  */
 export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
-  const src = `/design/${name}.svg`;
-  if (name === 'empty-fonts')
+  const src = iconSrc(name);
+  if (name === imageIcon)
     return (
       <img src={src} alt="" draggable={false} className={`design-icon icon-${name} ${className}`} />
     );

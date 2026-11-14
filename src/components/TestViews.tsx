@@ -18,8 +18,6 @@ function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
     fontFamily: `"${font.family}"`,
     fontWeight: font.weight,
     fontSize: `${tab.controls.fontSize}pt`,
-    lineHeight: tab.controls.lineHeight,
-    letterSpacing: `${tab.controls.letterSpacing}px`,
     direction: tab.controls.direction,
     textAlign: tab.controls.alignment,
     fontFeatureSettings: featureCSS(tab.controls.features, font.features),
@@ -97,7 +95,6 @@ function WeightsOverlay({
         aria-label="هم‌پوشانی وزن فونت‌ها"
         style={{
           fontSize: `${px}px`,
-          lineHeight: tab.controls.lineHeight,
           direction: tab.controls.direction,
           paddingBlock: `${Math.max(72, Math.round(px * 0.45))}px ${Math.max(40, Math.round(px * 0.25))}px`,
           paddingInline: `${Math.max(64, Math.round(px * 0.4))}px ${Math.max(32, Math.round(px * 0.2))}px`,

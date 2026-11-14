@@ -4,8 +4,6 @@ import { supportsControl, tabIds, type ControlId, type TabId } from './tabs';
 const tag = z.string().regex(/^[a-zA-Z0-9 ]{4}$/);
 export const controlsSchema = z.strictObject({
   fontSize: z.number().min(8).max(300).default(16),
-  lineHeight: z.number().min(0.8).max(4).default(1.8),
-  letterSpacing: z.number().min(-10).max(30).default(0),
   direction: z.enum(['rtl', 'ltr']).default('rtl'),
   alignment: z.enum(['start', 'center', 'end', 'justify']).default('start'),
   features: z.record(tag, z.boolean()).default({}),
@@ -49,8 +47,24 @@ export function createFactoryDefaults(): AppDefaults {
 }
 
 /** Do not persist controls that have no effect on a tab. */
+/** Controls that were removed; stripped from stored payloads so old data still parses. */
+const retiredControls = ['lineHeight', 'letterSpacing'];
+
+function stripRetiredControls(input: unknown): unknown {
+  if (!input || typeof input !== 'object') return input;
+  const tabs = (input as { tabs?: unknown }).tabs;
+  if (!tabs || typeof tabs !== 'object') return input;
+  for (const tab of Object.values(tabs)) {
+    const controls = (tab as { controls?: unknown } | null)?.controls;
+    if (controls && typeof controls === 'object') {
+      for (const key of retiredControls) delete (controls as Record<string, unknown>)[key];
+    }
+  }
+  return input;
+}
+
 export function normalizeDefaults(input: unknown): AppDefaults {
-  const parsed = defaultsSchema.parse(input);
+  const parsed = defaultsSchema.parse(stripRetiredControls(input));
   const factory = createFactoryDefaults();
   for (const id of tabIds) {
     for (const key of Object.keys(parsed.tabs[id].controls) as ControlId[]) {

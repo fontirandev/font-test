@@ -124,26 +124,6 @@ export function SettingsDialog({
               onChange={(fontSize) => patch({ fontSize })}
             />
           )}
-          {supportsControl(tabId, 'lineHeight') && (
-            <Slider
-              label="Line height"
-              value={tab.controls.lineHeight}
-              min={0.8}
-              max={4}
-              step={0.1}
-              onChange={(lineHeight) => patch({ lineHeight })}
-            />
-          )}
-          {supportsControl(tabId, 'letterSpacing') && (
-            <Slider
-              label="Letter spacing"
-              value={tab.controls.letterSpacing}
-              min={-10}
-              max={30}
-              step={0.1}
-              onChange={(letterSpacing) => patch({ letterSpacing })}
-            />
-          )}
           {supportsControl(tabId, 'showMissing') && (
             <Toggle
               label="Show missing characters"

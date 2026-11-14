@@ -219,7 +219,7 @@
     background: var(--control);
   }
   .tab {
-    width: 94px;
+    padding-inline: 20px;
     height: 32px;
     color: var(--muted);
     white-space: nowrap;
@@ -235,23 +235,11 @@
     font-weight: 600;
   }
   .tab-mark {
+    flex-shrink: 0;
     width: 9px;
     height: 9px;
-    background: currentColor;
-    clip-path: polygon(
-      33% 0,
-      66% 0,
-      66% 33%,
-      100% 33%,
-      100% 66%,
-      66% 66%,
-      66% 100%,
-      33% 100%,
-      33% 66%,
-      0 66%,
-      0 33%,
-      33% 33%
-    );
+    background: url('/images/tabmark.gif') no-repeat;
+    image-rendering: pixelated;
   }
   .workspace-layout {
     display: grid;
@@ -737,6 +725,9 @@
   .mobile-message {
     display: none;
   }
+}
+:root[data-theme='dark'] .tab-mark {
+  filter: invert(1);
 }
 :root[data-theme='dark'] .icon-empty-fonts {
   filter: invert(0.88) hue-rotate(180deg);

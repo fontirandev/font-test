@@ -127,66 +127,6 @@ export function PreviewControls({
           </div>
         </section>
       )}
-      {permitted('lineHeight') && (
-        <details className="control-section">
-          <summary className="cursor-pointer text-muted">Text layout</summary>
-          <div className="space-y-4 pt-4">
-            <Slider
-              label="Line height"
-              min={0.8}
-              max={4}
-              step={0.1}
-              value={c.lineHeight}
-              disabled={disabled}
-              onChange={(lineHeight) => onChange({ lineHeight })}
-            />
-            {permitted('letterSpacing') && (
-              <Slider
-                label="Letter spacing"
-                min={-10}
-                max={30}
-                step={0.1}
-                unit="px"
-                value={c.letterSpacing}
-                disabled={disabled}
-                onChange={(letterSpacing) => onChange({ letterSpacing })}
-              />
-            )}
-            {permitted('direction') && (
-              <label className="field">
-                Direction
-                <select
-                  value={c.direction}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    onChange({ direction: e.target.value as PreviewSettings['direction'] })
-                  }
-                >
-                  <option value="rtl">Right to left</option>
-                  <option value="ltr">Left to right</option>
-                </select>
-              </label>
-            )}
-            {permitted('alignment') && (
-              <label className="field">
-                Alignment
-                <select
-                  value={c.alignment}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    onChange({ alignment: e.target.value as PreviewSettings['alignment'] })
-                  }
-                >
-                  <option value="start">Start</option>
-                  <option value="center">Center</option>
-                  <option value="end">End</option>
-                  <option value="justify">Justify</option>
-                </select>
-              </label>
-            )}
-          </div>
-        </details>
-      )}
       {permitted('showMissing') && (
         <div className="control-section">
           <Toggle

@@ -9,7 +9,7 @@ import {
   zwnjSamples,
 } from '../lib/samples';
 import { inspectFont } from '../lib/qa';
-import type { TabSession, WorkspaceAction } from '../state/workspace';
+import { WEIGHTS_TEXT_MAX, type TabSession, type WorkspaceAction } from '../state/workspace';
 import { Button, Icon, IconButton } from './ui';
 import { Glyphs, Metadata } from './FontInspection';
 
@@ -41,6 +41,111 @@ function downloadJson(name: string, data: unknown) {
 /** Width that fits four joining forms of one letter at the tab's font size (pt → px). */
 function joiningCellWidth(tab: TabSession): number {
   return Math.ceil(tab.controls.fontSize * (4 / 3) * 10 + 16);
+}
+
+/** Fill share per layer: 50% for one or two fonts, otherwise split evenly. */
+function weightsLayerAlpha(count: number): number {
+  return count <= 2 ? 0.5 : 1 / count;
+}
+
+/**
+ * Every active font is stacked on the same spot: a translucent fill shows where
+ * weights overlap and a solid hairline outline shows each font's contour.
+ * Layer order follows the sidebar order (last font on top).
+ */
+function WeightsOverlay({
+  tab,
+  fonts,
+  dispatch,
+}: {
+  tab: TabSession;
+  fonts: LoadedFont[];
+  dispatch: Dispatch<WorkspaceAction>;
+}) {
+  const alpha = weightsLayerAlpha(fonts.length);
+  const percent = Math.round(alpha * 100);
+  // Mix with the ink colour instead of using CSS opacity, so the outline stays fully opaque.
+  const fill = `color-mix(in srgb, var(--ink) ${percent}%, transparent)`;
+  const px = tab.controls.fontSize * (4 / 3);
+  const text = tab.text || 'پیش‌نمایش…';
+  return (
+    <div className="weights-tab">
+      <div className="weights-input-head">
+        <label htmlFor="weights-input">متن کوتاه برای مقایسه وزن‌ها</label>
+        <span className="weights-count" dir="ltr">
+          {Array.from(tab.text).length}/{WEIGHTS_TEXT_MAX}
+        </span>
+      </div>
+      <textarea
+        id="weights-input"
+        className="text-input weights-input panel"
+        rows={2}
+        dir="rtl"
+        maxLength={WEIGHTS_TEXT_MAX}
+        value={tab.text}
+        placeholder="متن کوتاه…"
+        onChange={(e) =>
+          dispatch({
+            type: 'set-text',
+            tab: 'weights',
+            text: Array.from(e.target.value.replace(/\n/g, '')).slice(0, WEIGHTS_TEXT_MAX).join(''),
+          })
+        }
+      />
+      <div
+        className="weights-stack panel"
+        aria-label="هم‌پوشانی وزن فونت‌ها"
+        style={{
+          fontSize: `${px}px`,
+          lineHeight: tab.controls.lineHeight,
+          direction: tab.controls.direction,
+          paddingBlock: `${Math.max(72, Math.round(px * 0.45))}px ${Math.max(40, Math.round(px * 0.25))}px`,
+          paddingInline: `${Math.max(64, Math.round(px * 0.4))}px ${Math.max(32, Math.round(px * 0.2))}px`,
+        }}
+      >
+        {fonts.map((font, index) => {
+          const layer: CSSProperties = {
+            fontFamily: `"${font.family}"`,
+            fontWeight: font.weight,
+            fontFeatureSettings: featureCSS(tab.controls.features, font.features),
+            fontSynthesis: 'none',
+            zIndex: index + 1,
+          };
+          return (
+            <div
+              className="weights-layer"
+              key={font.id}
+              style={layer}
+              title={`${font.fileName} — #${index + 1} — ${percent}%`}
+            >
+              <span className="weights-layer-outline" aria-hidden>
+                {text}
+              </span>
+              <span className="weights-layer-fill" style={{ color: fill }}>
+                {text}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <ul className="weights-legend">
+        {fonts.map((font, index) => (
+          <li key={font.id}>
+            <span className="weights-legend-num" dir="ltr">
+              {index + 1}
+            </span>
+            <span className="weights-legend-swatch" style={{ background: fill }} />
+            <span className="weights-legend-name" title={font.fileName}>
+              {font.name}
+            </span>
+            <span className="weights-legend-num" dir="ltr">
+              {percent}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function TestViews({
@@ -215,7 +320,10 @@ export function TestViews({
           همه فونت‌های این تب غیرفعال‌اند. یک فونت را از نوار کناری فعال کنید.
         </div>
       )}
-      {fonts.map((font) => {
+      {tabId === 'weights' && !disabled && (
+        <WeightsOverlay tab={tab} fonts={fonts} dispatch={dispatch} />
+      )}
+      {(tabId === 'weights' ? [] : fonts).map((font) => {
         const style = previewStyle(font, tab);
         return (
           <section className="preview-card panel" key={font.id}>
@@ -225,40 +333,6 @@ export function TestViews({
             {(tabId === 'typing-test' || tabId === 'live-typing') && (
               <div className="preview-text min-h-[132px]" style={style}>
                 {tabId === 'typing-test' ? segments.slice(0, position).join('') : tab.text}
-              </div>
-            )}
-            {tabId === 'weights' && (
-              <div>
-                {(font.axes.find((axis) => axis.tag === 'wght')
-                  ? [
-                      ...new Set([
-                        font.axes.find((a) => a.tag === 'wght')!.min,
-                        ...[100, 200, 300, 400, 500, 600, 700, 800, 900].filter((weight) => {
-                          const axis = font.axes.find((a) => a.tag === 'wght')!;
-                          return weight >= axis.min && weight <= axis.max;
-                        }),
-                        font.axes.find((a) => a.tag === 'wght')!.max,
-                      ]),
-                    ].sort((a, b) => a - b)
-                  : [font.weight]
-                ).map((weight) => (
-                  <div className="flex items-center gap-6 border-b border-line p-4" key={weight}>
-                    <span className="text-muted" dir="ltr">
-                      {weight}
-                    </span>
-                    <p
-                      style={{
-                        ...style,
-                        fontWeight: weight,
-                        fontVariationSettings: font.axes.some((a) => a.tag === 'wght')
-                          ? `"wght" ${weight}`
-                          : 'normal',
-                      }}
-                    >
-                      {tab.text}
-                    </p>
-                  </div>
-                ))}
               </div>
             )}
             {tabId === 'languages' &&
@@ -308,16 +382,21 @@ export function TestViews({
               <div
                 className="glyph-grid"
                 // Four joining forms per cell stay on one line, so cells widen with the font size.
-                style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${joiningCellWidth(tab)}px, 1fr))` }}
+                style={{
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${joiningCellWidth(tab)}px, 1fr))`,
+                }}
               >
                 {persianAlphabet.map((char) => (
                   <div className="glyph-cell" key={char}>
                     <span className="joining-forms" style={style}>
-                      {[char, `${char}${letter}`, `${letter}${char}${letter}`, `${letter}${char}`].map(
-                        (form) => (
-                          <span key={form}>{form}</span>
-                        ),
-                      )}
+                      {[
+                        char,
+                        `${char}${letter}`,
+                        `${letter}${char}${letter}`,
+                        `${letter}${char}`,
+                      ].map((form) => (
+                        <span key={form}>{form}</span>
+                      ))}
                     </span>
                     <small>{char}</small>
                   </div>

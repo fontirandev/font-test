@@ -26,6 +26,14 @@ export interface Workspace {
 export const sampleText =
   'به تماشای جهان بنشین؛ هر حرف، پنجره‌ای به دنیایی تازه است.\nطراحی حروف فارسی، پیوندی میان خوانایی و زیبایی است.';
 
+/** Short sample for overlaying weights; the old tester used the same word. */
+export const weightsSampleText = 'آبنوس وزن';
+export const WEIGHTS_TEXT_MAX = 32;
+
+export function defaultText(id: TabId): string {
+  return id === 'weights' ? weightsSampleText : sampleText;
+}
+
 export function createWorkspace(defaults: AppDefaults): Workspace {
   return {
     currentTab: 'typing-test',
@@ -39,7 +47,7 @@ export function createWorkspace(defaults: AppDefaults): Workspace {
             active: {} as Record<string, boolean>,
             sort: tab.sort,
             controls: tab.controls,
-            text: sampleText,
+            text: defaultText(id),
             typing: { position: 0, speed: 3 },
           },
         ];
@@ -132,7 +140,12 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
       break;
     case 'reset-tab': {
       const defaults = getTabDefaults(action.defaults, action.tab);
-      next = { ...tab, controls: defaults.controls, sort: defaults.sort, text: sampleText };
+      next = {
+        ...tab,
+        controls: defaults.controls,
+        sort: defaults.sort,
+        text: defaultText(action.tab),
+      };
       break;
     }
   }

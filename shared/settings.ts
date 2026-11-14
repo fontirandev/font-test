@@ -37,7 +37,13 @@ export function createFactoryDefaults(): AppDefaults {
     version: 1,
     theme: 'system',
     tabs: Object.fromEntries(
-      tabIds.map((id) => [id, tabDefaultsSchema.parse({})]),
+      tabIds.map((id) => [
+        id,
+        tabDefaultsSchema.parse(
+          // Weight overlays need large glyphs to show stroke differences (150pt ≈ 200px).
+          id === 'weights' ? { controls: controlsSchema.parse({ fontSize: 150 }) } : {},
+        ),
+      ]),
     ) as AppDefaults['tabs'],
   };
 }

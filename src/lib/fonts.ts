@@ -1,6 +1,13 @@
 import opentype, { type Font } from 'opentype.js';
 import type { FontIdentity } from '../state/workspace';
 
+// crypto.randomUUID only exists in secure contexts (HTTPS or localhost), so the
+// app breaks when served over plain HTTP; getRandomValues works everywhere.
+function createId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export interface VariationAxis {
   tag: string;
   name: string;
@@ -84,7 +91,7 @@ export async function loadFont(file: File): Promise<LoadedFont> {
   } catch {
     /* Browser rendering may support formats the inspector does not. */
   }
-  const id = crypto.randomUUID();
+  const id = createId();
   const family = `font-desk-${id}`;
   const axes = parsed ? readAxes(parsed) : [];
   const weightAxis = axes.find((axis) => axis.tag === 'wght');

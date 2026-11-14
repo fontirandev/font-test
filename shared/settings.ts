@@ -16,7 +16,6 @@ export const sortSchema = z.enum(['manual', 'name-asc', 'name-desc', 'weight-asc
 export type FontSort = z.infer<typeof sortSchema>;
 
 export const tabDefaultsSchema = z.strictObject({
-  sort: sortSchema.default('manual'),
   activateNewFonts: z.boolean().default(true),
   controls: controlsSchema.default(() => controlsSchema.parse({})),
 });
@@ -26,6 +25,8 @@ export type TabDefaults = z.infer<typeof tabDefaultsSchema>;
 export const defaultsSchema = z.strictObject({
   version: z.literal(1),
   theme: z.enum(['system', 'light', 'dark']),
+  /** Font order is shared by all tabs, so its initial sort is a single default. */
+  sort: sortSchema.default('manual'),
   tabs: z.record(z.enum(tabIds), tabDefaultsSchema),
 });
 export type AppDefaults = z.infer<typeof defaultsSchema>;
@@ -34,6 +35,7 @@ export function createFactoryDefaults(): AppDefaults {
   return {
     version: 1,
     theme: 'light',
+    sort: 'manual',
     tabs: Object.fromEntries(
       tabIds.map((id) => [
         id,
@@ -50,21 +52,33 @@ export function createFactoryDefaults(): AppDefaults {
 /** Controls that were removed; stripped from stored payloads so old data still parses. */
 const retiredControls = ['lineHeight', 'letterSpacing'];
 
-function stripRetiredControls(input: unknown): unknown {
+/**
+ * Upgrade payloads saved by older versions: drop retired controls, and lift the
+ * old per-tab sort into the single shared sort (the first tab's value wins).
+ */
+function migrateLegacy(input: unknown): unknown {
   if (!input || typeof input !== 'object') return input;
-  const tabs = (input as { tabs?: unknown }).tabs;
-  if (!tabs || typeof tabs !== 'object') return input;
-  for (const tab of Object.values(tabs)) {
-    const controls = (tab as { controls?: unknown } | null)?.controls;
+  const root = input as { tabs?: unknown; sort?: unknown };
+  if (!root.tabs || typeof root.tabs !== 'object') return input;
+  let legacySort: unknown;
+  for (const [id, tab] of Object.entries(root.tabs)) {
+    if (!tab || typeof tab !== 'object') continue;
+    const record = tab as { controls?: unknown; sort?: unknown };
+    if ('sort' in record) {
+      if (id === tabIds[0] || legacySort === undefined) legacySort = record.sort;
+      delete record.sort;
+    }
+    const controls = record.controls;
     if (controls && typeof controls === 'object') {
       for (const key of retiredControls) delete (controls as Record<string, unknown>)[key];
     }
   }
+  if (root.sort === undefined && legacySort !== undefined) root.sort = legacySort;
   return input;
 }
 
 export function normalizeDefaults(input: unknown): AppDefaults {
-  const parsed = defaultsSchema.parse(stripRetiredControls(input));
+  const parsed = defaultsSchema.parse(migrateLegacy(input));
   const factory = createFactoryDefaults();
   for (const id of tabIds) {
     for (const key of Object.keys(parsed.tabs[id].controls) as ControlId[]) {

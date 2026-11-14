@@ -76,7 +76,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
   const resolvedTheme = useTheme(theme);
   const tabId = workspace.currentTab;
   const tab = workspace.tabs[tabId];
-  const activeFonts = orderedFonts(fonts, tab).filter((font) => tab.active[font.id]);
+  const activeFonts = orderedFonts(fonts, workspace).filter((font) => tab.active[font.id]);
   const openPicker = useCallback(() => input.current?.click(), []);
   useEffect(() => {
     alive.current = true;
@@ -220,6 +220,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
             fonts={fonts}
             tabId={tabId}
             tab={tab}
+            ordering={workspace}
             dispatch={dispatch}
             onFiles={(files) => {
               void addFiles(files);
@@ -272,6 +273,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           defaults={{ ...defaults, theme }}
           currentTab={tabId}
           currentSession={tab}
+          currentSort={workspace.sort}
           onClose={() => setModal(null)}
           onSaved={(value) => {
             setDefaults(value);

@@ -14,14 +14,17 @@ export interface FontIdentity {
   sortWeight?: number;
 }
 export interface TabSession {
-  order: string[];
   active: Record<string, boolean>;
-  sort: FontSort;
   controls: PreviewSettings;
   text: string;
   typing: { position: number; speed: number };
 }
-export interface Workspace {
+/** Font order and sort are shared by every tab; visibility stays per tab. */
+export interface FontOrdering {
+  order: string[];
+  sort: FontSort;
+}
+export interface Workspace extends FontOrdering {
   currentTab: TabId;
   tabs: Record<TabId, TabSession>;
 }
@@ -39,15 +42,15 @@ export function defaultText(id: TabId): string {
 export function createWorkspace(defaults: AppDefaults): Workspace {
   return {
     currentTab: 'typing-test',
+    order: [],
+    sort: defaults.sort,
     tabs: Object.fromEntries(
       tabIds.map((id) => {
         const tab = getTabDefaults(defaults, id);
         return [
           id,
           {
-            order: [] as string[],
             active: {} as Record<string, boolean>,
-            sort: tab.sort,
             controls: tab.controls,
             text: defaultText(id),
             typing: { position: 0, speed: 3 },
@@ -63,8 +66,8 @@ export type WorkspaceAction =
   | { type: 'add-fonts'; fonts: FontIdentity[]; defaults: AppDefaults }
   | { type: 'remove-font'; id: string }
   | { type: 'toggle-font'; tab: TabId; id: string }
-  | { type: 'set-sort'; tab: TabId; sort: FontSort }
-  | { type: 'move-font'; tab: TabId; id: string; before: string; visibleOrder?: string[] }
+  | { type: 'set-sort'; sort: FontSort }
+  | { type: 'move-font'; id: string; before: string; visibleOrder?: string[] }
   | { type: 'set-controls'; tab: TabId; patch: Partial<PreviewSettings> }
   | { type: 'set-text'; tab: TabId; text: string }
   | { type: 'set-typing'; tab: TabId; patch: Partial<TabSession['typing']> }
@@ -72,15 +75,23 @@ export type WorkspaceAction =
 
 export function workspaceReducer(state: Workspace, action: WorkspaceAction): Workspace {
   if (action.type === 'select-tab') return { ...state, currentTab: action.tab };
+  if (action.type === 'set-sort') return { ...state, sort: action.sort };
+  if (action.type === 'move-font') return moveFont(state, action);
   if (action.type === 'add-fonts' || action.type === 'remove-font') {
+    const additions =
+      action.type === 'add-fonts'
+        ? action.fonts.filter((font) => !state.order.includes(font.id))
+        : [];
+    const order =
+      action.type === 'add-fonts'
+        ? [...state.order, ...additions.map((font) => font.id)]
+        : state.order.filter((font) => font !== action.id);
     const tabs = { ...state.tabs };
     for (const id of tabIds) {
       const tab = state.tabs[id];
       if (action.type === 'add-fonts') {
-        const additions = action.fonts.filter((font) => !tab.order.includes(font.id));
         tabs[id] = {
           ...tab,
-          order: [...tab.order, ...additions.map((font) => font.id)],
           active: {
             ...tab.active,
             ...Object.fromEntries(
@@ -91,44 +102,18 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
       } else {
         const active = { ...tab.active };
         delete active[action.id];
-        tabs[id] = { ...tab, active, order: tab.order.filter((font) => font !== action.id) };
+        tabs[id] = { ...tab, active };
       }
     }
-    return { ...state, tabs };
+    return { ...state, order, tabs };
   }
   const tab = state.tabs[action.tab];
   let next: TabSession;
   switch (action.type) {
     case 'toggle-font':
-      if (!tab.order.includes(action.id)) return state;
+      if (!state.order.includes(action.id)) return state;
       next = { ...tab, active: { ...tab.active, [action.id]: !tab.active[action.id] } };
       break;
-    case 'set-sort':
-      next = { ...tab, sort: action.sort };
-      break;
-    case 'move-font': {
-      if (
-        action.id === action.before ||
-        !tab.order.includes(action.id) ||
-        !tab.order.includes(action.before)
-      )
-        return state;
-      const source =
-        action.visibleOrder &&
-        action.visibleOrder.length === tab.order.length &&
-        new Set(action.visibleOrder).size === tab.order.length &&
-        action.visibleOrder.every((id) => tab.order.includes(id))
-          ? action.visibleOrder
-          : tab.order;
-      // Dropping onto a row takes that row's slot: moving down lands after it,
-      // moving up lands before it. Otherwise a one-step move down is a no-op
-      // and the last slot is unreachable.
-      const movingDown = source.indexOf(action.id) < source.indexOf(action.before);
-      const order = source.filter((id) => id !== action.id);
-      order.splice(order.indexOf(action.before) + (movingDown ? 1 : 0), 0, action.id);
-      next = { ...tab, order, sort: 'manual' };
-      break;
-    }
     case 'set-controls': {
       const patch = Object.fromEntries(
         Object.entries(action.patch).filter(([key]) =>
@@ -149,7 +134,6 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
       next = {
         ...tab,
         controls: defaults.controls,
-        sort: defaults.sort,
         text: defaultText(action.tab),
       };
       break;
@@ -158,18 +142,46 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
   return { ...state, tabs: { ...state.tabs, [action.tab]: next } };
 }
 
-export function orderedFonts<T extends FontIdentity>(fonts: T[], tab: TabSession): T[] {
+function moveFont(
+  state: Workspace,
+  action: Extract<WorkspaceAction, { type: 'move-font' }>,
+): Workspace {
+  const { order: current } = state;
+  if (
+    action.id === action.before ||
+    !current.includes(action.id) ||
+    !current.includes(action.before)
+  )
+    return state;
+  const source =
+    action.visibleOrder &&
+    action.visibleOrder.length === current.length &&
+    new Set(action.visibleOrder).size === current.length &&
+    action.visibleOrder.every((id) => current.includes(id))
+      ? action.visibleOrder
+      : current;
+  // Dropping onto a row takes that row's slot: moving down lands after it,
+  // moving up lands before it. Otherwise a one-step move down is a no-op
+  // and the last slot is unreachable.
+  const movingDown = source.indexOf(action.id) < source.indexOf(action.before);
+  const order = source.filter((id) => id !== action.id);
+  order.splice(order.indexOf(action.before) + (movingDown ? 1 : 0), 0, action.id);
+  return { ...state, order, sort: 'manual' };
+}
+
+export function orderedFonts<T extends FontIdentity>(fonts: T[], ordering: FontOrdering): T[] {
+  const { order, sort } = ordering;
   const byId = new Map(fonts.map((font) => [font.id, font]));
-  const ordered = tab.order.flatMap((id) => {
+  const ordered = order.flatMap((id) => {
     const font = byId.get(id);
     return font ? [font] : [];
   });
-  if (tab.sort === 'manual') return ordered;
-  const direction = tab.sort.endsWith('desc') ? -1 : 1;
+  if (sort === 'manual') return ordered;
+  const direction = sort.endsWith('desc') ? -1 : 1;
   return ordered.sort(
     (a, b) =>
       direction *
-      (tab.sort.startsWith('weight')
+      (sort.startsWith('weight')
         ? (a.sortWeight ?? a.weight) - (b.sortWeight ?? b.weight)
         : a.name.localeCompare(b.name, 'fa')),
   );

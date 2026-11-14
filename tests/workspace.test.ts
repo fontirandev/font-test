@@ -14,11 +14,11 @@ function setup() {
   const defaults = createFactoryDefaults();
   return workspaceReducer(createWorkspace(defaults), { type: 'add-fonts', fonts, defaults });
 }
-test('font activation, order, controls and text are isolated per tab', () => {
+test('font activation, controls and text are isolated per tab', () => {
   const initial = setup();
   const untouched = structuredClone(initial.tabs['live-typing']);
   let state = workspaceReducer(initial, { type: 'toggle-font', tab: 'typing-test', id: 'a' });
-  state = workspaceReducer(state, { type: 'move-font', tab: 'typing-test', id: 'b', before: 'a' });
+  state = workspaceReducer(state, { type: 'move-font', id: 'b', before: 'a' });
   state = workspaceReducer(state, {
     type: 'set-controls',
     tab: 'typing-test',
@@ -27,19 +27,19 @@ test('font activation, order, controls and text are isolated per tab', () => {
   state = workspaceReducer(state, { type: 'set-text', tab: 'typing-test', text: 'آزمایش' });
   assert.deepEqual(state.tabs['live-typing'], untouched);
   assert.equal(state.tabs['typing-test'].active.a, false);
-  assert.deepEqual(state.tabs['typing-test'].order, ['b', 'a']);
+  assert.deepEqual(state.order, ['b', 'a']);
   assert.equal(initial.tabs['typing-test'].active.a, true);
 });
-test('sorting never mutates another tab or the shared font array', () => {
-  const state = workspaceReducer(setup(), { type: 'set-sort', tab: 'weights', sort: 'weight-asc' });
+test('font order and sort are shared by every tab and never mutate the font array', () => {
+  let state = workspaceReducer(setup(), { type: 'set-sort', sort: 'weight-asc' });
   assert.deepEqual(
-    orderedFonts(fonts, state.tabs.weights).map((f) => f.id),
+    orderedFonts(fonts, state).map((f) => f.id),
     ['b', 'a'],
   );
-  assert.deepEqual(
-    orderedFonts(fonts, state.tabs['typing-test']).map((f) => f.id),
-    ['a', 'b'],
-  );
+  const tabs = structuredClone(state.tabs);
+  state = workspaceReducer(state, { type: 'select-tab', tab: 'glyphs' });
+  assert.equal(state.sort, 'weight-asc');
+  assert.deepEqual(state.tabs, tabs);
   assert.deepEqual(
     fonts.map((f) => f.id),
     ['a', 'b'],
@@ -47,21 +47,20 @@ test('sorting never mutates another tab or the shared font array', () => {
 });
 test('removing a font removes every stale tab reference', () => {
   const state = workspaceReducer(setup(), { type: 'remove-font', id: 'a' });
+  assert.deepEqual(state.order, ['b']);
   for (const id of tabIds) {
-    assert.deepEqual(state.tabs[id].order, ['b']);
     assert.equal('a' in state.tabs[id].active, false);
   }
 });
 test('dragging from a sorted list materializes its visible order before moving', () => {
   const state = workspaceReducer(setup(), {
     type: 'move-font',
-    tab: 'weights',
     id: 'a',
     before: 'b',
     visibleOrder: ['b', 'a'],
   });
-  assert.deepEqual(state.tabs.weights.order, ['a', 'b']);
-  assert.equal(state.tabs.weights.sort, 'manual');
+  assert.deepEqual(state.order, ['a', 'b']);
+  assert.equal(state.sort, 'manual');
 });
 test('automatic typing progress survives tab changes without entering defaults', () => {
   let state = workspaceReducer(setup(), {
@@ -93,6 +92,21 @@ test('irrelevant controls are rejected at the tab boundary', () => {
   assert.equal(supportsControl('glyphs', 'features'), false);
   assert.equal(supportsControl('weights', 'axes'), false);
 });
+test('old saved defaults with per-tab sort and retired controls are migrated', () => {
+  const legacy = JSON.parse(JSON.stringify(createFactoryDefaults()));
+  delete legacy.sort;
+  for (const tab of Object.values(legacy.tabs) as Record<string, any>[]) {
+    tab.sort = 'manual';
+    tab.controls.lineHeight = 1.8;
+    tab.controls.letterSpacing = 0;
+  }
+  legacy.tabs['typing-test'].sort = 'weight-desc';
+  const migrated = normalizeDefaults(legacy);
+  assert.equal(migrated.sort, 'weight-desc');
+  assert.equal('sort' in migrated.tabs.weights, false);
+  assert.equal('lineHeight' in migrated.tabs.weights.controls, false);
+  assert.equal(createWorkspace(migrated).sort, 'weight-desc');
+});
 test('defaults reject session data and invalid numeric controls', () => {
   assert.throws(() => normalizeDefaults({ ...createFactoryDefaults(), fonts }));
   const defaults = createFactoryDefaults();
@@ -114,15 +128,10 @@ test('variable axes are clamped independently to each font range', () => {
   );
 });
 test('dragging down onto the next row moves past it, so the last slot is reachable', () => {
-  let state = workspaceReducer(setup(), {
-    type: 'move-font',
-    tab: 'weights',
-    id: 'a',
-    before: 'b',
-  });
-  assert.deepEqual(state.tabs.weights.order, ['b', 'a']);
-  state = workspaceReducer(state, { type: 'move-font', tab: 'weights', id: 'a', before: 'b' });
-  assert.deepEqual(state.tabs.weights.order, ['a', 'b']);
+  let state = workspaceReducer(setup(), { type: 'move-font', id: 'a', before: 'b' });
+  assert.deepEqual(state.order, ['b', 'a']);
+  state = workspaceReducer(state, { type: 'move-font', id: 'a', before: 'b' });
+  assert.deepEqual(state.order, ['a', 'b']);
 });
 test('weight sort prefers the inferred style weight over OS/2', () => {
   const fonts = [
@@ -130,9 +139,8 @@ test('weight sort prefers the inferred style weight over OS/2', () => {
     { id: 'y', name: 'Y Light', weight: 400, sortWeight: 300 },
     { id: 'z', name: 'Z', weight: 500 },
   ];
-  const tab = { ...setup().tabs.weights, order: ['x', 'y', 'z'], sort: 'weight-asc' as const };
   assert.deepEqual(
-    orderedFonts(fonts, tab).map((font) => font.id),
+    orderedFonts(fonts, { order: ['x', 'y', 'z'], sort: 'weight-asc' }).map((font) => font.id),
     ['y', 'z', 'x'],
   );
 });

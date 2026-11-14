@@ -14,12 +14,14 @@ export function SettingsDialog({
   defaults,
   currentTab,
   currentSession,
+  currentSort,
   onSaved,
   onClose,
 }: {
   defaults: AppDefaults;
   currentTab: TabId;
   currentSession: TabSession;
+  currentSort: FontSort;
   onSaved: (defaults: AppDefaults) => void;
   onClose: () => void;
 }) {
@@ -72,6 +74,19 @@ export function SettingsDialog({
           </select>
         </label>
         <label className="field">
+          مرتب‌سازی اولیه فونت‌ها
+          <select
+            value={draft.sort}
+            onChange={(e) => setDraft({ ...draft, sort: e.target.value as FontSort })}
+          >
+            <option value="manual">ترتیب افزودن فایل</option>
+            <option value="weight-asc">وزن: سبک به سنگین</option>
+            <option value="weight-desc">وزن: سنگین به سبک</option>
+            <option value="name-asc">نام: صعودی</option>
+            <option value="name-desc">نام: نزولی</option>
+          </select>
+        </label>
+        <label className="field">
           پیش‌فرض تب
           <select value={tabId} onChange={(e) => setTabId(e.target.value as TabId)}>
             {tabDefinitions.map((definition) => (
@@ -82,24 +97,6 @@ export function SettingsDialog({
           </select>
         </label>
         <div className="grid grid-cols-2 gap-5">
-          <label className="field">
-            مرتب‌سازی اولیه
-            <select
-              value={tab.sort}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  tabs: { ...draft.tabs, [tabId]: { ...tab, sort: e.target.value as FontSort } },
-                })
-              }
-            >
-              <option value="manual">ترتیب افزودن فایل</option>
-              <option value="weight-asc">وزن: سبک به سنگین</option>
-              <option value="weight-desc">وزن: سنگین به سبک</option>
-              <option value="name-asc">نام: صعودی</option>
-              <option value="name-desc">نام: نزولی</option>
-            </select>
-          </label>
           <div dir="ltr">
             <Toggle
               label="Activate newly added fonts"
@@ -171,12 +168,12 @@ export function SettingsDialog({
             onClick={() =>
               setDraft((value) => ({
                 ...value,
+                sort: currentSort,
                 tabs: {
                   ...value.tabs,
                   [tabId]: {
                     ...value.tabs[tabId],
                     controls: structuredClone(currentSession.controls),
-                    sort: currentSession.sort,
                   },
                 },
               }))

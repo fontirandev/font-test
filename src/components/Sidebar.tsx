@@ -1,6 +1,11 @@
 import { useState, type Dispatch } from 'react';
 import type { TabId } from '../../shared/tabs';
-import { orderedFonts, type TabSession, type WorkspaceAction } from '../state/workspace';
+import {
+  orderedFonts,
+  type FontOrdering,
+  type TabSession,
+  type WorkspaceAction,
+} from '../state/workspace';
 import type { LoadedFont } from '../lib/fonts';
 import { Button, Icon, IconButton } from './ui';
 import { PreviewControls } from './PreviewControls';
@@ -9,6 +14,7 @@ export function Sidebar({
   fonts,
   tabId,
   tab,
+  ordering,
   dispatch,
   onFiles,
   onRemove,
@@ -18,6 +24,7 @@ export function Sidebar({
   fonts: LoadedFont[];
   tabId: TabId;
   tab: TabSession;
+  ordering: FontOrdering;
   dispatch: Dispatch<WorkspaceAction>;
   onFiles: (files: File[]) => void;
   onRemove: (id: string) => void;
@@ -30,12 +37,11 @@ export function Sidebar({
   const canReorder = !loading && fonts.length > 1;
   const [filesOpen, setFilesOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const sorted = orderedFonts(fonts, tab);
+  const sorted = orderedFonts(fonts, ordering);
   const activeCount = fonts.filter((font) => tab.active[font.id]).length;
   const move = (id: string, before: string) =>
     dispatch({
       type: 'move-font',
-      tab: tabId,
       visibleOrder: sorted.map((font) => font.id),
       id,
       before,
@@ -87,14 +93,17 @@ export function Sidebar({
                 onClick={() =>
                   dispatch({
                     type: 'set-sort',
-                    tab: tabId,
-                    sort: tab.sort === 'weight-asc' ? 'weight-desc' : 'weight-asc',
+                    sort: ordering.sort === 'weight-asc' ? 'weight-desc' : 'weight-asc',
                   })
                 }
               >
                 <Icon name="sort" />
                 Sort by weight
-                {tab.sort === 'weight-asc' ? ' ↑' : tab.sort === 'weight-desc' ? ' ↓' : ''}
+                {ordering.sort === 'weight-asc'
+                  ? ' ↑'
+                  : ordering.sort === 'weight-desc'
+                    ? ' ↓'
+                    : ''}
               </Button>
               <div className="mb-[5px] space-y-[5px]">
                 {sorted.map((font, index) => (

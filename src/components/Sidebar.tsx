@@ -111,6 +111,10 @@ export function Sidebar({
                     }
                     key={font.id}
                     draggable={canReorder}
+                    onClick={(e) => {
+                      if (loading || (e.target as Element).closest('button')) return;
+                      dispatch({ type: 'toggle-font', tab: tabId, id: font.id });
+                    }}
                     onDragStart={(e) => {
                       e.dataTransfer.effectAllowed = 'move';
                       e.dataTransfer.setData('text/plain', font.id);

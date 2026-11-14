@@ -1,0 +1,20 @@
+# Base service definition. Use with docker-compose.local.yml or docker-compose.prod.yml (see Makefile).
+#
+# The server checks that the Host header is 127.0.0.1:<PORT> or localhost:<PORT>,
+# so the published host port must equal the container port.
+name: font-desk
+
+services:
+  app:
+    environment:
+      HOST: 0.0.0.0
+      PORT: ${PORT:-8030}
+      FONT_DESK_DATA_DIR: /data
+    ports:
+      # Published on loopback only: Font Desk is a local, single-user tool.
+      - '127.0.0.1:${PORT:-8030}:${PORT:-8030}'
+    volumes:
+      - font_desk_data:/data
+
+volumes:
+  font_desk_data:

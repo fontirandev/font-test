@@ -1,0 +1,20 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="moon">
+<g id="Vector">
+<path d="M7 1H9V3H7V1Z" fill="#99A1AF"/>
+<path d="M11 9H13V11H11V9Z" fill="#99A1AF"/>
+<path d="M13 11H15V13H13V11Z" fill="#99A1AF"/>
+<path d="M15 13H21V15H15V13Z" fill="#99A1AF"/>
+<path d="M21 15H23V17H21V15Z" fill="#99A1AF"/>
+<path d="M19 17H21V19H19V17Z" fill="#99A1AF"/>
+<path d="M14 19H19V21H14V19Z" fill="#99A1AF"/>
+<path d="M9 21H14V23H9V21Z" fill="#99A1AF"/>
+<path d="M5 19H9V21H5V19Z" fill="#99A1AF"/>
+<path d="M3 15H5V19H3V15Z" fill="#99A1AF"/>
+<path d="M1 10H3V15H1V10Z" fill="#99A1AF"/>
+<path d="M3 5H5V10H3V5Z" fill="#99A1AF"/>
+<path d="M5 3H7V5H5V3Z" fill="#99A1AF"/>
+<path d="M9 3H11V9H9V3Z" fill="#99A1AF"/>
+</g>
+</g>
+</svg>

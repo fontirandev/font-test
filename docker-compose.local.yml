@@ -1,0 +1,18 @@
+# Local development: Vite HMR with the source tree bind-mounted.
+services:
+  app:
+    container_name: font_desk_dev
+    build:
+      context: .
+      target: dev
+    image: font-desk:dev
+    volumes:
+      - .:/app
+      # Keep the container's Linux node_modules separate from the host's.
+      - font_desk_node_modules:/app/node_modules
+    environment:
+      FONT_DESK_WATCH_POLLING: '1'
+    tty: true
+
+volumes:
+  font_desk_node_modules:

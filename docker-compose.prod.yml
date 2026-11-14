@@ -1,0 +1,9 @@
+# Production build: compiled dist/ served by the Node server.
+services:
+  app:
+    container_name: font_desk_prod
+    build:
+      context: .
+      target: prod
+    image: font-desk:prod
+    restart: unless-stopped

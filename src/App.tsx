@@ -1,0 +1,311 @@
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { createFactoryDefaults, type AppDefaults } from '../shared/settings';
+import { tabDefinitions } from '../shared/tabs';
+import { loadDefaults } from './lib/defaults-client';
+import { loadFont, unloadFont, type LoadedFont } from './lib/fonts';
+import { createWorkspace, orderedFonts, workspaceReducer } from './state/workspace';
+import { Button, Icon, IconButton, Modal } from './components/ui';
+import { Sidebar } from './components/Sidebar';
+import { TestViews } from './components/TestViews';
+import { SettingsDialog } from './components/SettingsDialog';
+import { DesignSystem } from './components/DesignSystem';
+
+function useTheme(theme: AppDefaults['theme']) {
+  const [resolved, setResolved] = useState<'light' | 'dark'>('light');
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const value = theme === 'system' ? (query.matches ? 'dark' : 'light') : theme;
+      document.documentElement.dataset.theme = value;
+      setResolved(value);
+    };
+    apply();
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
+  }, [theme]);
+  return resolved;
+}
+
+export function App() {
+  const [defaults, setDefaults] = useState<AppDefaults | null>(null);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setError('');
+    loadDefaults(controller.signal)
+      .then(setDefaults)
+      .catch((error) => {
+        if (!controller.signal.aborted) setError(error.message);
+      });
+    return () => controller.abort();
+  }, [attempt]);
+  if (!defaults)
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
+        <Icon name="logo" />
+        <p role={error ? 'alert' : 'status'}>{error || 'در حال آماده‌سازی میز کار…'}</p>
+        {error && (
+          <>
+            <Button onClick={() => setAttempt(attempt + 1)}>تلاش دوباره</Button>
+            <Button onClick={() => setDefaults(createFactoryDefaults())}>
+              ادامه با تنظیمات موقت
+            </Button>
+          </>
+        )}
+      </div>
+    );
+  return <WorkspaceApp initialDefaults={defaults} />;
+}
+
+function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
+  const [defaults, setDefaults] = useState(initialDefaults);
+  const [workspace, dispatch] = useReducer(workspaceReducer, initialDefaults, createWorkspace);
+  const [fonts, setFonts] = useState<LoadedFont[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [modal, setModal] = useState<'settings' | 'about' | 'design-system' | null>(null);
+  const [theme, setTheme] = useState(defaults.theme);
+  const input = useRef<HTMLInputElement>(null);
+  const fontRef = useRef<LoadedFont[]>([]);
+  const importing = useRef(false);
+  const alive = useRef(true);
+  const resolvedTheme = useTheme(theme);
+  const tabId = workspace.currentTab;
+  const tab = workspace.tabs[tabId];
+  const activeFonts = orderedFonts(fonts, tab).filter((font) => tab.active[font.id]);
+  const openPicker = useCallback(() => input.current?.click(), []);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      for (const font of fontRef.current) unloadFont(font);
+    };
+  }, []);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o' && !modal) {
+        event.preventDefault();
+        if (!importing.current) openPicker();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openPicker, modal]);
+  async function addFiles(files: File[]) {
+    if (importing.current || files.length === 0) return;
+    importing.current = true;
+    setLoading(true);
+    setMessage('');
+    const added: LoadedFont[] = [];
+    const errors: string[] = [];
+    for (const file of files) {
+      try {
+        const font = await loadFont(file);
+        if (!alive.current) {
+          unloadFont(font);
+          continue;
+        }
+        added.push(font);
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : `خواندن ${file.name} ممکن نیست.`);
+      }
+    }
+    if (alive.current) {
+      fontRef.current = [...fontRef.current, ...added];
+      setFonts(fontRef.current);
+      dispatch({ type: 'add-fonts', fonts: added, defaults });
+      if (errors.length) setMessage(errors.join(' • '));
+      setLoading(false);
+    } else for (const font of added) unloadFont(font);
+    importing.current = false;
+  }
+  function removeFont(id: string) {
+    const font = fontRef.current.find((font) => font.id === id);
+    if (font) unloadFont(font);
+    fontRef.current = fontRef.current.filter((font) => font.id !== id);
+    setFonts(fontRef.current);
+    dispatch({ type: 'remove-font', id });
+  }
+  const navigationTabs = tabDefinitions.filter((definition) => definition.id !== 'languages');
+  return (
+    <>
+      <div className="mobile-message">
+        <Icon name="logo" />
+        <h1 className="text-xl font-semibold">اندازه صفحه پشتیبانی نمی‌شود</h1>
+        <p className="leading-8 text-muted">
+          Font Desk برای کار با فونت روی نمایشگر بزرگ طراحی شده است. از رایانه یا صفحه‌ای با عرض
+          حداقل ۷۶۸ پیکسل استفاده کنید.
+        </p>
+      </div>
+      <div className="desktop-app">
+        <input
+          className="hidden"
+          ref={input}
+          type="file"
+          accept=".ttf,.otf,.woff,.woff2"
+          multiple
+          aria-label="انتخاب فایل‌های فونت"
+          disabled={loading}
+          onChange={(event) => {
+            void addFiles(Array.from(event.target.files ?? []));
+            event.target.value = '';
+          }}
+        />
+        <header className="topbar">
+          <div className="brand">
+            <Icon name="logo" />
+            <IconButton
+              icon={resolvedTheme === 'dark' ? 'sun' : 'moon'}
+              label="تغییر پوسته روشن و تاریک"
+              onClick={() =>
+                setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
+              }
+            />
+            <IconButton icon="gear" label="تنظیمات پیش‌فرض" onClick={() => setModal('settings')} />
+          </div>
+          <nav className="tab-rail" aria-label="آزمایش‌های فونت">
+            <div className="tab-list" role="tablist">
+              {navigationTabs.map((definition) => {
+                const selected =
+                  definition.id === tabId ||
+                  (definition.id === 'characters' && tabId === 'languages');
+                return (
+                  <button
+                    key={definition.id}
+                    id={`tab-${definition.id}`}
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls="test-panel"
+                    tabIndex={selected ? 0 : -1}
+                    className="tab"
+                    onClick={() => dispatch({ type: 'select-tab', tab: definition.id })}
+                    onKeyDown={(event) => {
+                      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                      event.preventDefault();
+                      const index = navigationTabs.findIndex((t) => t.id === definition.id);
+                      const next =
+                        event.key === 'Home'
+                          ? 0
+                          : event.key === 'End'
+                            ? navigationTabs.length - 1
+                            : (index +
+                                (event.key === 'ArrowLeft' ? 1 : -1) +
+                                navigationTabs.length) %
+                              navigationTabs.length;
+                      const target = navigationTabs[next]!;
+                      dispatch({ type: 'select-tab', tab: target.id });
+                      document.getElementById(`tab-${target.id}`)?.focus();
+                    }}
+                  >
+                    {selected && <span className="tab-mark" aria-hidden="true" />}
+                    {definition.title}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+          <div className="flex items-center justify-center border-r border-line">
+            <IconButton
+              icon="info"
+              label="درباره Font Desk"
+              variant="ghost"
+              onClick={() => setModal('about')}
+            />
+          </div>
+        </header>
+        <div className="workspace-layout">
+          <Sidebar
+            fonts={fonts}
+            tabId={tabId}
+            tab={tab}
+            dispatch={dispatch}
+            onFiles={(files) => {
+              void addFiles(files);
+            }}
+            onRemove={removeFont}
+            loading={loading}
+            openFilePicker={openPicker}
+          />
+          <main
+            className="content-area"
+            id="test-panel"
+            role="tabpanel"
+            aria-labelledby={`tab-${tabId === 'languages' ? 'characters' : tabId}`}
+          >
+            {message && (
+              <div className="status-message flex items-center justify-between gap-4" role="alert">
+                <p>{message}</p>
+                <Button onClick={() => setMessage('')}>بستن</Button>
+              </div>
+            )}
+            {fonts.length === 0 ? (
+              <div className="panel empty-panel">
+                <Icon name="empty-fonts" className="empty-illustration" />
+                <div className="empty-message">
+                  <span>یک یا چند فایل فونت</span>
+                  <IconButton
+                    icon="add"
+                    label="افزودن فونت"
+                    variant="primary"
+                    disabled={loading}
+                    onClick={openPicker}
+                  />
+                  <span>را اضافه کنید</span>
+                </div>
+              </div>
+            ) : (
+              <TestViews
+                key={tabId}
+                tabId={tabId}
+                tab={tab}
+                fonts={activeFonts}
+                dispatch={dispatch}
+              />
+            )}
+          </main>
+        </div>
+      </div>
+      {modal === 'settings' && (
+        <SettingsDialog
+          defaults={{ ...defaults, theme }}
+          currentTab={tabId}
+          currentSession={tab}
+          onClose={() => setModal(null)}
+          onSaved={(value) => {
+            setDefaults(value);
+            setTheme(value.theme);
+            setMessage('پیش‌فرض‌ها ذخیره شدند. تنظیمات تب‌های باز بدون تغییر باقی ماندند.');
+          }}
+        />
+      )}
+      {modal === 'about' && (
+        <Modal title="درباره Font Desk" onClose={() => setModal(null)}>
+          <p className="leading-8">
+            میز کار محلی برای طراحان فونت فارسی. فایل‌های فونت در حافظه مرورگر باز می‌شوند و به هیچ
+            سروری ارسال نمی‌شوند. تنها پیش‌فرض‌هایی که ذخیره می‌کنید در SQLite روی همین رایانه
+            نگهداری می‌شوند.
+          </p>
+          <p className="mt-4 leading-7 text-muted">
+            میانبر افزودن فایل: Ctrl / ⌘ + O. برای تغییر ترتیب فایل‌ها، دسته کنار نام را بکشید یا با
+            کلیدهای بالا و پایین جابجا کنید. انتخاب و ترتیب فونت‌ها برای هر تب مستقل است.
+          </p>
+          <div className="mt-5 flex gap-3">
+            <Button onClick={() => setModal('design-system')}>
+              سیستم طراحی و حالت‌های غیرفعال
+            </Button>
+            <a
+              className="button"
+              href="https://github.com/mojtabaem/FontiranFontTester"
+              target="_blank"
+              rel="noreferrer"
+            >
+              نسخه پیشین
+            </a>
+          </div>
+        </Modal>
+      )}
+      {modal === 'design-system' && <DesignSystem onClose={() => setModal(null)} />}
+    </>
+  );
+}

@@ -1,0 +1,22 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="sun">
+<g id="Vector">
+<path d="M32 20H36V28H32V20Z" fill="black"/>
+<path d="M12 20H16V28H12V20Z" fill="black"/>
+<path d="M16 16H20V20H16V16Z" fill="black"/>
+<path d="M28 16H32V20H28V16Z" fill="black"/>
+<path d="M28 28H32V32H28V28Z" fill="black"/>
+<path d="M16 28H20V32H16V28Z" fill="black"/>
+<path d="M20 32H28V36H20V32Z" fill="black"/>
+<path d="M20 12H28V16H20V12Z" fill="black"/>
+<path d="M39 22H45V26H39V22Z" fill="black"/>
+<path d="M3 22H9V26H3V22Z" fill="black"/>
+<path d="M22 3H26V9H22V3Z" fill="black"/>
+<path d="M22 39H26V45H22V39Z" fill="black"/>
+<path d="M34 11.2426L38.2426 7L41.0711 9.82843L36.8284 14.0711L34 11.2426Z" fill="black"/>
+<path d="M14.0711 11.2426L9.82843 7L7 9.82843L11.2426 14.0711L14.0711 11.2426Z" fill="black"/>
+<path d="M34 36.8284L38.2426 41.0711L41.0711 38.2426L36.8284 34L34 36.8284Z" fill="black"/>
+<path d="M14.0711 36.8284L9.82843 41.0711L7 38.2426L11.2426 34L14.0711 36.8284Z" fill="black"/>
+</g>
+</g>
+</svg>

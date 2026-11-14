@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="pause">
+<g id="Vector">
+<path d="M32 6H38V10H32V6Z" fill="black"/>
+<path d="M10 6H16V10H10V6Z" fill="black"/>
+<path d="M32 38H38V42H32V38Z" fill="black"/>
+<path d="M10 38H16V42H10V38Z" fill="black"/>
+<path d="M6 10H10V38H6V10Z" fill="black"/>
+<path d="M16 10H20V38H16V10Z" fill="black"/>
+<path d="M28 10H32V38H28V10Z" fill="black"/>
+<path d="M38 10H42V38H38V10Z" fill="black"/>
+</g>
+</g>
+</svg>

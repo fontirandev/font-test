@@ -3,6 +3,7 @@ import type { AppDefaults } from '../../shared/settings';
 import { tabDefinitions, type TabId } from '../../shared/tabs';
 import {
   TEXT_MAX,
+  WEIGHTS_TEXT_MAX,
   createFactoryTexts,
   languageSheets,
   toSingleLine,
@@ -78,6 +79,16 @@ export function SettingsDialog({
               maxLength={TEXT_MAX}
               value={texts.liveTyping}
               onChange={(e) => set({ liveTyping: toSingleLine(e.target.value) })}
+            />
+          </Section>
+          <Section tab="weights" hint="متن کوتاهی که وزن‌های فونت روی هم نمایش می‌دهند.">
+            <input
+              type="text"
+              aria-label={`متن ${tabTitle('weights')}`}
+              className="text-input"
+              maxLength={WEIGHTS_TEXT_MAX}
+              value={texts.weights}
+              onChange={(e) => set({ weights: toSingleLine(e.target.value) })}
             />
           </Section>
           <Section tab="languages">

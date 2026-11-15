@@ -34,7 +34,7 @@ test('font activation, controls and text are isolated per tab', () => {
 test('font size and variable axes are shared by every tab that offers them', () => {
   let state = workspaceReducer(setup(), {
     type: 'set-controls',
-    tab: 'connections',
+    tab: 'languages',
     patch: { fontSize: 72, axes: { wght: 700, CNTR: 40 }, features: { ss01: true } },
   });
   for (const id of tabIds) {
@@ -112,6 +112,13 @@ test('irrelevant controls are rejected at the tab boundary', () => {
   assert.equal(supportsControl('metadata', 'features'), false);
   assert.equal(supportsControl('glyphs', 'features'), false);
   assert.equal(supportsControl('weights', 'axes'), false);
+});
+test('reference sheets have no adjustable controls and keep the 32pt default', () => {
+  const workspace = createWorkspace(createFactoryDefaults());
+  for (const tab of ['diacritics', 'characters', 'connections', 'zwnj'] as const) {
+    assert.equal(supportsControl(tab, 'fontSize'), false, tab);
+    assert.equal(workspace.tabs[tab].controls.fontSize, 32, tab);
+  }
 });
 test('old saved defaults with per-tab sort and retired controls are migrated', () => {
   const legacy = JSON.parse(JSON.stringify(createFactoryDefaults()));

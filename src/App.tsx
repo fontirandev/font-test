@@ -325,10 +325,9 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           defaults={{ ...defaults, theme }}
           onClose={() => setModal(null)}
           onSaved={(value) => {
-            // Typing tabs still showing the old default pick up the new one.
-            for (const id of ['typing-test', 'live-typing'] as const) {
-              if (workspace.tabs[id].text === defaultText(id, defaults))
-                dispatch({ type: 'set-text', tab: id, text: defaultText(id, value) });
+            // Saving a default also updates the three editable preview samples immediately.
+            for (const id of ['typing-test', 'live-typing', 'weights'] as const) {
+              dispatch({ type: 'set-text', tab: id, text: defaultText(id, value) });
             }
             setDefaults(value);
             setTheme(value.theme);

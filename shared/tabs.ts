@@ -1,4 +1,13 @@
 /** Capability declarations are the single source of truth for visible controls. */
+export type ControlId =
+  | 'display'
+  | 'fontSize'
+  | 'direction'
+  | 'alignment'
+  | 'features'
+  | 'axes'
+  | 'showMissing';
+
 export const tabDefinitions = [
   {
     id: 'typing-test',
@@ -12,7 +21,7 @@ export const tabDefinitions = [
   },
   {
     id: 'weights',
-    title: 'آبنوس وزن',
+    title: 'آبشار وزن',
     controls: ['fontSize', 'direction', 'features'],
   },
   {
@@ -21,37 +30,23 @@ export const tabDefinitions = [
     controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
-  {
-    id: 'diacritics',
-    title: 'اعراب',
-    controls: ['display', 'fontSize', 'features', 'axes'],
-    singleFont: true,
-  },
-  {
-    id: 'characters',
-    title: 'کاراکترها',
-    controls: ['display', 'fontSize', 'showMissing', 'features', 'axes'],
-    singleFont: true,
-  },
-  {
-    id: 'connections',
-    title: 'اتصالات',
-    controls: ['display', 'fontSize', 'features', 'axes'],
-    singleFont: true,
-  },
-  {
-    id: 'zwnj',
-    title: 'نیم‌فاصله',
-    controls: ['display', 'fontSize', 'features', 'axes'],
-    singleFont: true,
-  },
+  // Reference sheets deliberately use a consistent 32pt, solid rendering.
+  // Keeping their controls empty also removes the sidebar settings section.
+  { id: 'diacritics', title: 'اعراب', controls: [], singleFont: true },
+  { id: 'characters', title: 'کاراکترها', controls: [], singleFont: true },
+  { id: 'connections', title: 'اتصالات', controls: [], singleFont: true },
+  { id: 'zwnj', title: 'نیم‌فاصله', controls: [], singleFont: true },
   { id: 'glyphs', title: 'لیست گلیف‌ها', controls: [], singleFont: true },
   { id: 'metadata', title: 'متادیتا', controls: [] },
   { id: 'qa-report', title: 'گزارش QA', controls: [], singleFont: true },
-] as const;
+] as const satisfies readonly {
+  id: string;
+  title: string;
+  controls: readonly ControlId[];
+  singleFont?: true;
+}[];
 
 export type TabId = (typeof tabDefinitions)[number]['id'];
-export type ControlId = (typeof tabDefinitions)[number]['controls'][number];
 export const tabIds = tabDefinitions.map(({ id }) => id) as [TabId, ...TabId[]];
 
 export function supportsControl(tab: TabId, control: ControlId): boolean {

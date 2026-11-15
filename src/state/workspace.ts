@@ -5,7 +5,7 @@ import {
   type PreviewSettings,
 } from '../../shared/settings';
 import { isSingleFont, supportsControl, tabIds, type TabId } from '../../shared/tabs';
-import { sampleText, toSingleLine } from '../../shared/texts';
+import { sampleText, toSingleLine, weightsSampleText, WEIGHTS_TEXT_MAX } from '../../shared/texts';
 
 export interface FontIdentity {
   id: string;
@@ -29,17 +29,15 @@ export interface Workspace extends FontOrdering {
   currentTab: TabId;
   tabs: Record<TabId, TabSession>;
 }
-/** Short sample for overlaying weights; the old tester used the same word. */
-export const weightsSampleText = 'آبنوس وزن';
-export const WEIGHTS_TEXT_MAX = 32;
+export { WEIGHTS_TEXT_MAX };
 
 /** The typing tabs edit their text in a single-line field. */
 export const singleLineTabs: readonly TabId[] = ['typing-test', 'live-typing', 'weights'];
 export { toSingleLine };
 
-/** Starting text of a tab: the saved default for the typing tabs, built-in otherwise. */
+/** Starting text of a tab: the saved default for editable text tabs, built-in otherwise. */
 export function defaultText(id: TabId, defaults: AppDefaults): string {
-  if (id === 'weights') return weightsSampleText;
+  if (id === 'weights') return defaults.texts.weights;
   if (id === 'typing-test') return toSingleLine(defaults.texts.typingTest);
   if (id === 'live-typing') return toSingleLine(defaults.texts.liveTyping);
   return sampleText;

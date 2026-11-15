@@ -10,6 +10,8 @@ export const sampleText =
   'به تماشای جهان بنشین؛ هر حرف، پنجره‌ای به دنیایی تازه است.\nطراحی حروف فارسی، پیوندی میان خوانایی و زیبایی است.';
 
 export const toSingleLine = (text: string) => text.replace(/\s*[\r\n]+\s*/g, ' ');
+export const weightsSampleText = 'آبشار وزن';
+export const WEIGHTS_TEXT_MAX = 32;
 
 /**
  * Characters checked for coverage, from the old tester's sample sheet:
@@ -60,6 +62,8 @@ const line = z.string().max(TEXT_MAX);
 export const textsSchema = z.strictObject({
   typingTest: line.default(toSingleLine(sampleText)),
   liveTyping: line.default(toSingleLine(sampleText)),
+  /** The short editable sample for the weight-overlay tab. */
+  weights: z.string().max(WEIGHTS_TEXT_MAX).default(weightsSampleText),
   languages: z
     .strictObject(
       Object.fromEntries(

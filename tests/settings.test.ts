@@ -15,7 +15,7 @@ test('SQLite round trip persists only validated defaults across connections', ()
   const repository = new SettingsRepository(file);
   const defaults = createFactoryDefaults();
   defaults.theme = 'dark';
-  defaults.tabs.connections.controls.fontSize = 44;
+  defaults.tabs['typing-test'].controls.fontSize = 44;
   repository.save(defaults);
   assert.throws(() => repository.save({ ...defaults, fontBytes: [1, 2, 3] }));
   repository.close();
@@ -82,15 +82,17 @@ test('default texts: old payloads get the built-in texts, saved texts survive a 
   // Edited texts are kept.
   const defaults = createFactoryDefaults();
   defaults.texts.typingTest = 'سلام';
+  defaults.texts.weights = 'وزن نمونه';
   defaults.texts.languages.urdu = 'اردو';
   const repository = new SettingsRepository(':memory:');
   try {
     repository.save(defaults);
     assert.equal(repository.read().texts.typingTest, 'سلام');
+    assert.equal(repository.read().texts.weights, 'وزن نمونه');
     assert.equal(repository.read().texts.languages.urdu, 'اردو');
     // Unknown text keys and oversized texts are rejected.
     assert.throws(() =>
-      repository.save({ ...defaults, texts: { ...defaults.texts, weights: 'x' } }),
+      repository.save({ ...defaults, texts: { ...defaults.texts, unknown: 'x' } }),
     );
     assert.throws(() =>
       repository.save({
@@ -107,6 +109,7 @@ test('default texts: old payloads get the built-in texts, saved texts survive a 
   full.texts = {
     typingTest: big,
     liveTyping: big,
+    weights: 'ب'.repeat(32),
     languages: { arabic: big, quran: big, urdu: big, kurdish: big },
     characters: big,
     zwnjPersian: big,

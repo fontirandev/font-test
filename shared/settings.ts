@@ -36,13 +36,19 @@ export const defaultsSchema = z.strictObject({
 export type AppDefaults = z.infer<typeof defaultsSchema>;
 
 export function createFactoryDefaults(): AppDefaults {
+  const fixedReferenceTabs = new Set(['diacritics', 'characters', 'connections', 'zwnj']);
   return {
     version: 1,
     theme: 'light',
     sort: 'manual',
     tabs: Object.fromEntries(
       // Font size is shared by every tab, so no tab gets its own size.
-      tabIds.map((id) => [id, tabDefaultsSchema.parse({})]),
+      tabIds.map((id) => [
+        id,
+        tabDefaultsSchema.parse(
+          fixedReferenceTabs.has(id) ? { controls: { fontSize: 32 } } : {},
+        ),
+      ]),
     ) as AppDefaults['tabs'],
     texts: createFactoryTexts(),
   };

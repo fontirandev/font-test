@@ -716,6 +716,29 @@
     overflow-wrap: anywhere;
     font-synthesis: none;
   }
+  /* Auto-typing shows a single line; long text scrolls horizontally. */
+  .preview-text-line {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* The scroll box clips vertically too, so size the line from the font's own
+       metrics and leave room for ink (heavy dots, marks) that hangs outside them. */
+    line-height: normal;
+    padding: 0.15em 8px;
+  }
+  /* Keep a full-height line box before anything is typed, so cards don't jump. */
+  .preview-text-line::after {
+    content: '\200b';
+  }
+  /* Tight cards so more fonts fit on screen in the auto-typing tab. */
+  .preview-card-compact {
+    min-height: 0;
+    margin-bottom: 4px;
+  }
+  .toolbar:has(+ .preview-card-compact) {
+    margin-bottom: 4px;
+  }
   .modal {
     padding: 0;
     margin: auto;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type Dispatch } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
 import type { TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
 import {
@@ -186,6 +186,20 @@ export function TestViews({
     );
     return () => window.clearInterval(timer);
   }, [playing, finished, segments.length, speed, fonts.length, position, dispatch, tabId]);
+  // Selecting fonts or changing the visible list restarts the auto-typing demo.
+  const fontKey = fonts.map((font) => font.id).join('|');
+  // A fresh demo (nothing typed yet) also starts on mount, e.g. after adding the first fonts.
+  const previousFontKey = useRef(position === 0 ? '' : fontKey);
+  useEffect(() => {
+    if (tabId !== 'typing-test' || previousFontKey.current === fontKey) return;
+    previousFontKey.current = fontKey;
+    if (!fontKey) {
+      setPlaying(false);
+      return;
+    }
+    dispatch({ type: 'set-typing', tab: tabId, patch: { position: 0 } });
+    setPlaying(true);
+  }, [fontKey, tabId, dispatch]);
   const isCharacters = tabId === 'characters' || tabId === 'languages';
   const disabled = fonts.length === 0;
   return (
@@ -323,14 +337,32 @@ export function TestViews({
       {(tabId === 'weights' ? [] : fonts).map((font) => {
         const style = previewStyle(font, tab);
         return (
-          <section className="preview-card panel" key={font.id}>
+          <section
+            className={`preview-card panel ${tabId === 'typing-test' ? 'preview-card-compact' : ''}`}
+            key={font.id}
+          >
             <h2 className="preview-heading" title={font.name}>
               {font.fileName}
             </h2>
             {(tabId === 'typing-test' || tabId === 'live-typing') && (
-              <div className="preview-text min-h-[132px]" style={style}>
-                {tabId === 'typing-test' ? segments.slice(0, position).join('') : tab.text}
-              </div>
+              tabId === 'typing-test' ? (
+                <div
+                  className="preview-text preview-text-line"
+                  style={style}
+                  ref={(el) => {
+                    // Keep the newest typed letter in view while typing.
+                    if (!el || !playing) return;
+                    const rtl = getComputedStyle(el).direction === 'rtl';
+                    el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
+                  }}
+                >
+                  {segments.slice(0, position).join('')}
+                </div>
+              ) : (
+                <div className="preview-text min-h-[132px]" style={style}>
+                  {tab.text}
+                </div>
+              )
             )}
             {tabId === 'languages' &&
               languageSamples.map((sample) => (

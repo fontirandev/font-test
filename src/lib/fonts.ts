@@ -82,7 +82,7 @@ function decompressWoff2(bytes: ArrayBuffer): Promise<ArrayBuffer> {
 }
 
 /** File bytes are read and rendered in this browser only. No upload endpoint exists. */
-export async function loadFont(file: File): Promise<LoadedFont> {
+export async function loadFont(file: File, id = createId()): Promise<LoadedFont> {
   if (!/\.(otf|ttf|woff2?)$/i.test(file.name)) throw new Error('فرمت مجاز: OTF، TTF، WOFF و WOFF2');
   if (file.size > 50 * 1024 * 1024) throw new Error('حجم فایل باید کمتر از ۵۰ مگابایت باشد.');
   const bytes = await file.arrayBuffer();
@@ -92,7 +92,6 @@ export async function loadFont(file: File): Promise<LoadedFont> {
   } catch {
     /* Browser rendering may support formats the inspector does not. */
   }
-  const id = createId();
   const family = `font-desk-${id}`;
   const axes = parsed ? readAxes(parsed) : [];
   const weightAxis = axes.find((axis) => axis.tag === 'wght');

@@ -4,7 +4,14 @@ import { tabDefinitions } from '../shared/tabs';
 import { loadDefaults } from './lib/defaults-client';
 import { links } from './lib/links';
 import { loadFont, unloadFont, type LoadedFont } from './lib/fonts';
-import { createWorkspace, defaultText, orderedFonts, workspaceReducer } from './state/workspace';
+import { defaultText, orderedFonts, workspaceReducer } from './state/workspace';
+import {
+  readStoredFontFiles,
+  readStoredWorkspace,
+  removeStoredFontFile,
+  storeFontFile,
+  storeWorkspace,
+} from './lib/workspace-storage';
 import { Button, Icon, IconButton, Modal } from './components/ui';
 import { Sidebar } from './components/Sidebar';
 import { TestViews } from './components/TestViews';
@@ -62,7 +69,7 @@ export function App() {
 
 function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
   const [defaults, setDefaults] = useState(initialDefaults);
-  const [workspace, dispatch] = useReducer(workspaceReducer, initialDefaults, createWorkspace);
+  const [workspace, dispatch] = useReducer(workspaceReducer, initialDefaults, readStoredWorkspace);
   const [fonts, setFonts] = useState<LoadedFont[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -83,6 +90,41 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
     return () => {
       alive.current = false;
       for (const font of fontRef.current) unloadFont(font);
+    };
+  }, []);
+  useEffect(() => {
+    storeWorkspace(workspace);
+  }, [workspace]);
+  useEffect(() => {
+    let cancelled = false;
+    async function restoreFonts() {
+      try {
+        const savedFonts = await readStoredFontFiles();
+        const restored: LoadedFont[] = [];
+        const failed: string[] = [];
+        for (const { id, file } of savedFonts) {
+          try {
+            restored.push(await loadFont(file, id));
+          } catch {
+            failed.push(id);
+            void removeStoredFontFile(id);
+          }
+        }
+        if (cancelled) {
+          for (const font of restored) unloadFont(font);
+          return;
+        }
+        fontRef.current = restored;
+        setFonts(restored);
+        for (const id of failed) dispatch({ type: 'remove-font', id });
+        if (failed.length) setMessage('برخی فونت‌های ذخیره‌شده دیگر قابل بارگذاری نبودند.');
+      } catch {
+        if (!cancelled) setMessage('بازیابی فونت‌های ذخیره‌شده ممکن نشد.');
+      }
+    }
+    void restoreFonts();
+    return () => {
+      cancelled = true;
     };
   }, []);
   useEffect(() => {
@@ -115,6 +157,11 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           continue;
         }
         added.push(font);
+        try {
+          await storeFontFile(font.id, file);
+        } catch {
+          errors.push(`ذخیرهٔ محلی «${file.name}» ممکن نیست.`);
+        }
       } catch (error) {
         errors.push(error instanceof Error ? error.message : `خواندن ${file.name} ممکن نیست.`);
       }
@@ -134,6 +181,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
     fontRef.current = fontRef.current.filter((font) => font.id !== id);
     setFonts(fontRef.current);
     dispatch({ type: 'remove-font', id });
+    void removeStoredFontFile(id);
   }
   return (
     <>

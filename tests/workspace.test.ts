@@ -5,6 +5,7 @@ import { supportsControl, tabIds } from '../shared/tabs';
 import { createWorkspace, orderedFonts, workspaceReducer } from '../src/state/workspace';
 import { featureCSS, variationCSS } from '../src/lib/fonts';
 import { inferWeight } from '../src/lib/weight';
+import { readStoredWorkspace, storeWorkspace } from '../src/lib/workspace-storage';
 
 const fonts = [
   { id: 'a', name: 'A', weight: 700 },
@@ -193,4 +194,42 @@ test('single-font tabs keep at most one font on', () => {
   state = workspaceReducer(state, { type: 'toggle-font', tab: 'characters', id: 'b' });
   assert.deepEqual(state.tabs.characters.active, { a: false, b: false, c: false });
   assert.equal(state.tabs['typing-test'].active.c, true);
+});
+
+test('workspace choices survive a browser-storage round trip', () => {
+  const savedStorage = globalThis.localStorage;
+  const memory = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => memory.set(key, value),
+    },
+  });
+  try {
+    const defaults = createFactoryDefaults();
+    let workspace = workspaceReducer(createWorkspace(defaults), {
+      type: 'add-fonts',
+      fonts,
+      defaults,
+    });
+    workspace = workspaceReducer(workspace, { type: 'select-tab', tab: 'connections' });
+    workspace = workspaceReducer(workspace, {
+      type: 'set-controls',
+      tab: 'connections',
+      patch: { fontSize: 72, features: { calt: false } },
+    });
+    workspace = workspaceReducer(workspace, {
+      type: 'set-text',
+      tab: 'live-typing',
+      text: 'متن پایدار',
+    });
+    storeWorkspace(workspace);
+    assert.deepEqual(readStoredWorkspace(defaults), workspace);
+  } finally {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: savedStorage,
+    });
+  }
 });

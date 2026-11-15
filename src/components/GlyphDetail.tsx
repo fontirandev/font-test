@@ -87,7 +87,7 @@ function glyphSvg(font: Font, glyph: Glyph) {
 }
 
 type Layer = 'fill' | 'points' | 'metrics';
-const layerLabels: Record<Layer, string> = { fill: 'پر', points: 'نقاط', metrics: 'خطوط متریک' };
+const layerLabels: Record<Layer, string> = { fill: 'رنگ', points: 'نقاط', metrics: 'خطوط متریک' };
 
 function Preview({ font, glyph, layers }: { font: Font; glyph: Glyph; layers: Set<Layer> }) {
   const model = useMemo(() => {
@@ -323,24 +323,26 @@ export function GlyphDetail({
               بعدی
             </Button>
             <span className="glyph-detail-spacer" />
-            {(Object.keys(layerLabels) as Layer[]).map((layer) => (
-              <button
-                key={layer}
-                type="button"
-                className="keyboard-toggle glyph-layer-toggle"
-                aria-pressed={layers.has(layer)}
-                onClick={() =>
-                  setLayers((current) => {
-                    const nextLayers = new Set(current);
-                    if (nextLayers.has(layer)) nextLayers.delete(layer);
-                    else nextLayers.add(layer);
-                    return nextLayers;
-                  })
-                }
-              >
-                {layerLabels[layer]}
-              </button>
-            ))}
+            <div className="glyph-layer-group" role="group" aria-label="لایه‌های نمایش" dir="rtl">
+              {(Object.keys(layerLabels) as Layer[]).map((layer) => (
+                <button
+                  key={layer}
+                  type="button"
+                  className="glyph-layer-toggle"
+                  aria-pressed={layers.has(layer)}
+                  onClick={() =>
+                    setLayers((current) => {
+                      const nextLayers = new Set(current);
+                      if (nextLayers.has(layer)) nextLayers.delete(layer);
+                      else nextLayers.add(layer);
+                      return nextLayers;
+                    })
+                  }
+                >
+                  {layerLabels[layer]}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="glyph-detail-preview">
             <Preview font={font} glyph={glyph} layers={layers} />

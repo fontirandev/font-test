@@ -857,6 +857,69 @@
     color: var(--muted);
     margin-top: 10px;
   }
+  /* Coverage sheet: the glyph in the tested font, the same character in the UI font below. */
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(max(96px, 2.4em), 1fr));
+    border-top: 1px solid var(--line);
+    border-inline-start: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .char-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px 10px;
+    border-bottom: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+  }
+  .char-cell-missing {
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+    box-shadow: inset 0 0 0 1px var(--danger);
+  }
+  .char-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.2em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .char-label {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 1;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .char-cell-missing .char-label {
+    color: var(--danger);
+  }
+  /* Language sheet: the text in the tested font, then in the UI font for comparison. */
+  .preview-bare {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .language-sample-main {
+    padding: 14px 14px 10px;
+    direction: rtl;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .language-sample-reference {
+    padding: 8px 14px 12px;
+    direction: rtl;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+  }
   .joining-forms {
     display: inline-flex;
     gap: 0.4em;

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
-import type { TabId } from '../../shared/tabs';
+import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
 import {
-  characterGroups,
+  characterSamples,
   diacriticSamples,
   insertKeyGroups,
   languageSamples,
@@ -190,7 +190,6 @@ export function TestViews({
       el.setSelectionRange(start + insert.length, start + insert.length);
     });
   };
-  const [group, setGroup] = useState<keyof typeof characterGroups>('فارسی');
   const segments = useMemo(
     () =>
       Array.from(
@@ -227,7 +226,6 @@ export function TestViews({
     dispatch({ type: 'set-typing', tab: tabId, patch: { position: 0 } });
     setPlaying(true);
   }, [fontKey, tabId, dispatch]);
-  const isCharacters = tabId === 'characters' || tabId === 'languages';
   const disabled = fonts.length === 0;
   return (
     <>
@@ -337,35 +335,6 @@ export function TestViews({
           )}
         </div>
       )}
-      {isCharacters && (
-        <div className="toolbar panel">
-          <Button
-            aria-pressed={tabId === 'characters'}
-            onClick={() => dispatch({ type: 'select-tab', tab: 'characters' })}
-          >
-            کاراکترها
-          </Button>
-          <Button
-            aria-pressed={tabId === 'languages'}
-            onClick={() => dispatch({ type: 'select-tab', tab: 'languages' })}
-          >
-            زبان‌ها
-          </Button>
-          {tabId === 'characters' && (
-            <select
-              className="text-input max-w-40"
-              aria-label="گروه کاراکترها"
-              value={group}
-              disabled={disabled}
-              onChange={(e) => setGroup(e.target.value as keyof typeof characterGroups)}
-            >
-              {Object.keys(characterGroups).map((name) => (
-                <option key={name}>{name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
       {tabId === 'connections' && (
         <div className="toolbar panel">
           <label className="field">
@@ -409,15 +378,22 @@ export function TestViews({
         const style = previewStyle(font, tab);
         return (
           <section
-            className={`preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`}
+            className={
+              // A single-font tab shows its one font bare: no card, no name heading.
+              isSingleFont(tabId)
+                ? 'preview-bare'
+                : `preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`
+            }
             key={font.id}
           >
-            <h2 className="preview-heading" title={font.name}>
-              <span className="preview-heading-name">{font.fileName}</span>
-              {tabId === 'live-typing' && (
-                <span className="preview-heading-count">{index + 1}</span>
-              )}
-            </h2>
+            {!isSingleFont(tabId) && (
+              <h2 className="preview-heading" title={font.name}>
+                <span className="preview-heading-name">{font.fileName}</span>
+                {tabId === 'live-typing' && (
+                  <span className="preview-heading-count">{index + 1}</span>
+                )}
+              </h2>
+            )}
             {(tabId === 'typing-test' || tabId === 'live-typing') &&
               (tabId === 'typing-test' ? (
                 <div
@@ -439,43 +415,47 @@ export function TestViews({
               ))}
             {tabId === 'languages' &&
               languageSamples.map((sample) => (
-                <div key={sample.lang} className="border-b border-line p-4">
-                  <p className="mb-2 text-muted">{sample.name}</p>
-                  <p lang={sample.lang} style={{ ...style, direction: sample.dir }}>
+                <article key={sample.id} className="language-sample panel" lang={sample.lang}>
+                  <h2 className="preview-heading">
+                    <span className="preview-heading-name">{sample.title}</span>
+                    <span className="preview-heading-count" dir="ltr">
+                      {sample.id}
+                    </span>
+                  </h2>
+                  <p className="language-sample-main" style={style}>
                     {sample.text}
                   </p>
-                </div>
+                  <p
+                    className="language-sample-reference"
+                    title="نمایش با فونت رابط کاربری برای تشخیص کاراکترهای گمشده"
+                  >
+                    {sample.text}
+                  </p>
+                </article>
               ))}
             {tabId === 'characters' && (
               <>
-                <div className="glyph-grid">
-                  {characterGroups[group]
-                    .filter(
-                      (char) =>
-                        tab.controls.showMissing ||
-                        !font.parsed ||
-                        font.parsed.charToGlyphIndex(char) > 0,
-                    )
-                    .map((char) => {
-                      const missing = font.parsed ? font.parsed.charToGlyphIndex(char) === 0 : null;
-                      return (
-                        <div
-                          className="glyph-cell"
-                          key={char}
-                          title={
-                            missing === null
-                              ? 'پوشش نامشخص'
-                              : missing
-                                ? 'گلیف موجود نیست'
-                                : 'گلیف موجود است'
-                          }
-                        >
-                          <span style={style}>{missing ? '□' : char}</span>
-                          <small>U+{char.codePointAt(0)!.toString(16).toUpperCase()}</small>
-                          {missing && <small className="!text-[var(--danger)]">ناموجود</small>}
-                        </div>
-                      );
-                    })}
+                <div className="char-grid" style={{ fontSize: style.fontSize }}>
+                  {characterSamples
+                    .map((char) => ({
+                      char,
+                      missing: font.parsed
+                        ? Array.from(char).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0)
+                        : null,
+                    }))
+                    .filter(({ missing }) => tab.controls.showMissing || !missing)
+                    .map(({ char, missing }) => (
+                      <div
+                        className={`char-cell ${missing ? 'char-cell-missing' : ''}`}
+                        key={char}
+                        title={`${missing ? 'پشتیبانی نمی‌شود — ' : ''}${codePoints(char)}`}
+                      >
+                        <span className="char-glyph" style={style}>
+                          {char}
+                        </span>
+                        <span className="char-label">{char}</span>
+                      </div>
+                    ))}
                 </div>
                 {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
               </>
@@ -587,4 +567,11 @@ export function TestViews({
       )}
     </>
   );
+}
+
+function codePoints(text: string): string {
+  return Array.from(
+    text,
+    (ch) => `U+${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`,
+  ).join(' ');
 }

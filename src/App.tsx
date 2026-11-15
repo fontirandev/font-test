@@ -135,7 +135,6 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
     setFonts(fontRef.current);
     dispatch({ type: 'remove-font', id });
   }
-  const navigationTabs = tabDefinitions.filter((definition) => definition.id !== 'languages');
   return (
     <>
       <div className="mobile-message">
@@ -172,10 +171,8 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           </div>
           <nav className="tab-rail" aria-label="آزمایش‌های فونت">
             <div className="tab-list" role="tablist">
-              {navigationTabs.map((definition) => {
-                const selected =
-                  definition.id === tabId ||
-                  (definition.id === 'characters' && tabId === 'languages');
+              {tabDefinitions.map((definition) => {
+                const selected = definition.id === tabId;
                 return (
                   <button
                     key={definition.id}
@@ -189,17 +186,17 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
                     onKeyDown={(event) => {
                       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
                       event.preventDefault();
-                      const index = navigationTabs.findIndex((t) => t.id === definition.id);
+                      const index = tabDefinitions.findIndex((t) => t.id === definition.id);
                       const next =
                         event.key === 'Home'
                           ? 0
                           : event.key === 'End'
-                            ? navigationTabs.length - 1
+                            ? tabDefinitions.length - 1
                             : (index +
                                 (event.key === 'ArrowLeft' ? 1 : -1) +
-                                navigationTabs.length) %
-                              navigationTabs.length;
-                      const target = navigationTabs[next]!;
+                                tabDefinitions.length) %
+                              tabDefinitions.length;
+                      const target = tabDefinitions[next]!;
                       dispatch({ type: 'select-tab', tab: target.id });
                       document.getElementById(`tab-${target.id}`)?.focus();
                     }}
@@ -238,7 +235,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
             className="content-area"
             id="test-panel"
             role="tabpanel"
-            aria-labelledby={`tab-${tabId === 'languages' ? 'characters' : tabId}`}
+            aria-labelledby={`tab-${tabId}`}
           >
             {message && (
               <div className="status-message flex items-center justify-between gap-4" role="alert">

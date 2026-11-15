@@ -4,7 +4,7 @@ import {
   type FontSort,
   type PreviewSettings,
 } from '../../shared/settings';
-import { supportsControl, tabIds, type TabId } from '../../shared/tabs';
+import { isSingleFont, supportsControl, tabIds, type TabId } from '../../shared/tabs';
 
 export interface FontIdentity {
   id: string;
@@ -90,12 +90,18 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
     for (const id of tabIds) {
       const tab = state.tabs[id];
       if (action.type === 'add-fonts') {
+        const activate = action.defaults.tabs[id].activateNewFonts;
+        // Single-font tabs only pick up a new font when nothing is showing yet.
+        const firstOnly = isSingleFont(id) && Object.values(tab.active).some(Boolean);
         tabs[id] = {
           ...tab,
           active: {
             ...tab.active,
             ...Object.fromEntries(
-              additions.map((font) => [font.id, action.defaults.tabs[id].activateNewFonts]),
+              additions.map((font, index) => [
+                font.id,
+                activate && (!isSingleFont(id) || (!firstOnly && index === 0)),
+              ]),
             ),
           },
         };
@@ -112,7 +118,14 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
   switch (action.type) {
     case 'toggle-font':
       if (!state.order.includes(action.id)) return state;
-      next = { ...tab, active: { ...tab.active, [action.id]: !tab.active[action.id] } };
+      next = {
+        ...tab,
+        active: isSingleFont(action.tab)
+          ? Object.fromEntries(
+              Object.keys(tab.active).map((id) => [id, id === action.id && !tab.active[id]]),
+            )
+          : { ...tab.active, [action.id]: !tab.active[action.id] },
+      };
       break;
     case 'set-controls': {
       const patch = Object.fromEntries(

@@ -156,3 +156,20 @@ test('weight inference reads style names before a misleading usWeightClass', () 
   assert.equal(inferWeight({ names: ['Plain.ttf'], weightClass: 7 }), 700);
   assert.equal(inferWeight({ names: ['Var.ttf'], variableDefault: 350 }), 350);
 });
+test('single-font tabs keep at most one font on', () => {
+  const defaults = createFactoryDefaults();
+  let state = setup();
+  assert.deepEqual(state.tabs.characters.active, { a: true, b: false });
+  assert.deepEqual(state.tabs.languages.active, { a: true, b: false });
+  state = workspaceReducer(state, {
+    type: 'add-fonts',
+    fonts: [{ id: 'c', name: 'C', weight: 400 }],
+    defaults,
+  });
+  assert.equal(state.tabs.characters.active.c, false);
+  state = workspaceReducer(state, { type: 'toggle-font', tab: 'characters', id: 'b' });
+  assert.deepEqual(state.tabs.characters.active, { a: false, b: true, c: false });
+  state = workspaceReducer(state, { type: 'toggle-font', tab: 'characters', id: 'b' });
+  assert.deepEqual(state.tabs.characters.active, { a: false, b: false, c: false });
+  assert.equal(state.tabs['typing-test'].active.c, true);
+});

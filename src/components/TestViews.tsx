@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
+import { diacriticGroups, insertKeyGroups, persianAlphabet } from '../lib/samples';
 import {
-  characterSamples,
-  diacriticGroups,
-  insertKeyGroups,
-  languageSamples,
-  persianAlphabet,
-  zwnjArabicSamples,
-  zwnjSamples,
-} from '../lib/samples';
+  languageSheets,
+  parseCharacters,
+  parseZwnjWords,
+  type DefaultTexts,
+} from '../../shared/texts';
 import { QaReport, QaToolbar, type QaFilter } from './QaReport';
-import { WEIGHTS_TEXT_MAX, type TabSession, type WorkspaceAction } from '../state/workspace';
+import {
+  WEIGHTS_TEXT_MAX,
+  toSingleLine,
+  type TabSession,
+  type WorkspaceAction,
+} from '../state/workspace';
 import { Button, Icon, IconButton } from './ui';
 import { Glyphs, Metadata } from './FontInspection';
 import { OnScreenKeyboard } from './OnScreenKeyboard';
@@ -27,6 +30,10 @@ function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
     fontFeatureSettings: featureCSS(tab.controls.features, font.features),
     fontVariationSettings: variationCSS(tab.controls.axes, font.axes),
     fontSynthesis: 'none',
+    ...(tab.controls.display === 'outline' && {
+      color: 'color-mix(in srgb, var(--ink) 50%, transparent)',
+      WebkitTextStroke: '1px var(--ink)',
+    }),
   };
 }
 
@@ -176,28 +183,30 @@ function WeightsOverlay({
   const text = tab.text || 'پیش‌نمایش…';
   return (
     <div className="weights-tab">
-      <div className="weights-input-head">
-        <label htmlFor="weights-input">متن کوتاه برای مقایسه وزن‌ها</label>
-        <span className="weights-count" dir="ltr">
-          {Array.from(tab.text).length}/{WEIGHTS_TEXT_MAX}
-        </span>
+      <div className="text-field panel">
+        <div className="text-field-head">
+          <label htmlFor="weights-input">متن کوتاه برای مقایسه وزن‌ها</label>
+          <span className="weights-count" dir="ltr">
+            {Array.from(tab.text).length}/{WEIGHTS_TEXT_MAX}
+          </span>
+        </div>
+        <input
+          id="weights-input"
+          type="text"
+          className="text-input"
+          dir="rtl"
+          maxLength={WEIGHTS_TEXT_MAX}
+          value={tab.text}
+          placeholder="متن کوتاه…"
+          onChange={(e) =>
+            dispatch({
+              type: 'set-text',
+              tab: 'weights',
+              text: Array.from(toSingleLine(e.target.value)).slice(0, WEIGHTS_TEXT_MAX).join(''),
+            })
+          }
+        />
       </div>
-      <textarea
-        id="weights-input"
-        className="text-input weights-input panel"
-        rows={2}
-        dir="rtl"
-        maxLength={WEIGHTS_TEXT_MAX}
-        value={tab.text}
-        placeholder="متن کوتاه…"
-        onChange={(e) =>
-          dispatch({
-            type: 'set-text',
-            tab: 'weights',
-            text: Array.from(e.target.value.replace(/\n/g, '')).slice(0, WEIGHTS_TEXT_MAX).join(''),
-          })
-        }
-      />
       <div
         className="weights-stack panel"
         aria-label="هم‌پوشانی وزن فونت‌ها"
@@ -258,9 +267,12 @@ export function TestViews({
   tab,
   fonts,
   allFonts,
+  texts,
   dispatch,
 }: {
   tabId: TabId;
+  /** Saved default content of the languages, characters and ZWNJ tabs. */
+  texts: DefaultTexts;
   tab: TabSession;
   fonts: LoadedFont[];
   /** Every loaded font, active or not; the QA report compares family siblings. */
@@ -276,7 +288,7 @@ export function TestViews({
   const [letter, setLetter] = useState('ب');
   const [diacriticLang, setDiacriticLang] = useState<'fa' | 'ar'>('fa');
   const [qaFilter, setQaFilter] = useState<QaFilter>('all');
-  const liveInput = useRef<HTMLTextAreaElement>(null);
+  const liveInput = useRef<HTMLInputElement>(null);
   const [keyboard, setKeyboard] = useState<KeyboardId | null>(null);
   const keyboardLayout = keyboardLayouts.find(({ id }) => id === keyboard);
   // Insert at the caret (replacing any selection) and keep typing from there.
@@ -340,62 +352,80 @@ export function TestViews({
   return (
     <>
       {tabId === 'typing-test' && (
-        <div className="toolbar panel">
-          <IconButton
-            icon={playing && !finished ? 'pause' : 'play'}
-            label={playing && !finished ? 'توقف تایپ' : 'شروع تایپ'}
-            variant="primary"
-            disabled={disabled || segments.length === 0}
-            onClick={() => {
-              if (finished) setPosition(0);
-              setPlaying(!playing || finished);
-            }}
-          />
-          <IconButton
-            icon="reset"
-            label="شروع مجدد"
-            disabled={disabled || position === 0}
-            onClick={() => {
-              setPlaying(false);
-              setPosition(0);
-            }}
-          />
-          <label className="speed-field">
-            <span>سرعت تایپ</span>
-            <select
-              aria-label="سرعت تایپ"
-              value={speed}
-              disabled={disabled}
-              onChange={(e) => setSpeed(Number(e.target.value))}
-            >
-              {[1, 3, 5, 10, 20].map((n) => (
-                <option key={n} value={n}>
-                  {n} حرف/ثانیه
-                </option>
-              ))}
-            </select>
-            <Icon name="chevron" />
+        <div className="typing-settings panel">
+          <label className="field text-field">
+            متن تایپ خودکار
+            <input
+              type="text"
+              className="text-input"
+              value={tab.text}
+              onChange={(e) => {
+                setPlaying(false);
+                setPosition(0);
+                dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(e.target.value) });
+              }}
+            />
           </label>
-          <span role="status" className="ms-auto text-[10px] text-muted">
-            {position > 0 ? `${position} / ${segments.length}` : ''}
-          </span>
+          <div className="toolbar">
+            <IconButton
+              icon={playing && !finished ? 'pause' : 'play'}
+              label={playing && !finished ? 'توقف تایپ' : 'شروع تایپ'}
+              variant="primary"
+              disabled={disabled || segments.length === 0}
+              onClick={() => {
+                if (finished) setPosition(0);
+                setPlaying(!playing || finished);
+              }}
+            />
+            <IconButton
+              icon="reset"
+              label="شروع مجدد"
+              disabled={disabled || position === 0}
+              onClick={() => {
+                setPlaying(false);
+                setPosition(0);
+              }}
+            />
+            <label className="speed-field">
+              <span>سرعت تایپ</span>
+              <select
+                aria-label="سرعت تایپ"
+                value={speed}
+                disabled={disabled}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+              >
+                {[1, 3, 5, 10, 20].map((n) => (
+                  <option key={n} value={n}>
+                    {n} حرف/ثانیه
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron" />
+            </label>
+            <span role="status" className="ms-auto text-[10px] text-muted">
+              {position > 0 ? `${position} / ${segments.length}` : ''}
+            </span>
+          </div>
         </div>
       )}
       {tabId === 'live-typing' && (
-        <div className="panel mb-1 p-2">
+        <div className="text-field panel mb-1">
           <label className="field">
             متن آزمایش
-            <textarea
+            <input
               ref={liveInput}
-              className="text-input min-h-16"
+              type="text"
+              className="text-input"
               value={tab.text}
               disabled={disabled}
-              onChange={(e) => dispatch({ type: 'set-text', tab: tabId, text: e.target.value })}
+              onChange={(e) =>
+                dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(e.target.value) })
+              }
             />
           </label>
           <div className="insert-keys mt-2">
             <Button disabled={disabled} onClick={() => insertText('\u200c')}>
-            نیم‌فاصله
+              نیم‌فاصله
             </Button>
             {insertKeyGroups.map((group) => (
               <div
@@ -531,29 +561,31 @@ export function TestViews({
                 </div>
               ))}
             {tabId === 'languages' &&
-              languageSamples.map((sample) => (
-                <article key={sample.id} className="language-sample panel" lang={sample.lang}>
-                  <h2 className="preview-heading">
-                    <span className="preview-heading-name">{sample.title}</span>
-                    <span className="preview-heading-count" dir="ltr">
-                      {sample.id}
-                    </span>
-                  </h2>
-                  <p className="language-sample-main" style={style}>
-                    {sample.text}
-                  </p>
-                  <p
-                    className="language-sample-reference"
-                    title="نمایش با فونت رابط کاربری برای تشخیص کاراکترهای گمشده"
-                  >
-                    {sample.text}
-                  </p>
-                </article>
-              ))}
+              languageSheets
+                .map((sheet) => ({ ...sheet, text: texts.languages[sheet.id] }))
+                .map((sample) => (
+                  <article key={sample.id} className="language-sample panel" lang={sample.lang}>
+                    <h2 className="preview-heading">
+                      <span className="preview-heading-name">{sample.title}</span>
+                      <span className="preview-heading-count" dir="ltr">
+                        {sample.id}
+                      </span>
+                    </h2>
+                    <p className="language-sample-main" style={style}>
+                      {sample.text}
+                    </p>
+                    <p
+                      className="language-sample-reference"
+                      title="نمایش با فونت رابط کاربری برای تشخیص کاراکترهای گمشده"
+                    >
+                      {sample.text}
+                    </p>
+                  </article>
+                ))}
             {tabId === 'characters' && (
               <>
                 <div className="char-grid" style={{ fontSize: style.fontSize }}>
-                  {characterSamples
+                  {parseCharacters(texts.characters)
                     .map((char) => ({
                       char,
                       missing: font.parsed
@@ -589,8 +621,8 @@ export function TestViews({
                 </thead>
                 <tbody>
                   {[
-                    ...zwnjSamples.map((row) => ({ row, lang: 'fa' })),
-                    ...zwnjArabicSamples.map((row) => ({ row, lang: 'ar' })),
+                    ...parseZwnjWords(texts.zwnjPersian).map((row) => ({ row, lang: 'fa' })),
+                    ...parseZwnjWords(texts.zwnjArabic).map((row) => ({ row, lang: 'ar' })),
                   ].map(({ row, lang }, i) => (
                     <tr key={i} lang={lang}>
                       {row.map((text, j) => (
@@ -613,21 +645,6 @@ export function TestViews({
           </section>
         );
       })}
-      {tabId === 'typing-test' && fonts.length > 0 && (
-        <details className="panel mt-4 p-4 text-muted">
-          <summary className="cursor-pointer">ویرایش متن تایپ خودکار</summary>
-          <textarea
-            aria-label="متن تایپ خودکار"
-            className="text-input mt-3 min-h-28"
-            value={tab.text}
-            onChange={(e) => {
-              setPlaying(false);
-              setPosition(0);
-              dispatch({ type: 'set-text', tab: tabId, text: e.target.value });
-            }}
-          />
-        </details>
-      )}
     </>
   );
 }

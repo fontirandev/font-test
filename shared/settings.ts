@@ -1,9 +1,12 @@
 import { z } from 'zod';
 import { supportsControl, tabIds, type ControlId, type TabId } from './tabs';
+import { createFactoryTexts, textsSchema } from './texts';
 
 const tag = z.string().regex(/^[a-zA-Z0-9 ]{4}$/);
 export const controlsSchema = z.strictObject({
-  fontSize: z.number().min(8).max(300).default(16),
+  /** solid: filled glyphs; outline: ink border over a 50% ink fill. */
+  display: z.enum(['solid', 'outline']).default('solid'),
+  fontSize: z.number().min(8).max(300).default(48),
   direction: z.enum(['rtl', 'ltr']).default('rtl'),
   alignment: z.enum(['start', 'center', 'end', 'justify']).default('start'),
   features: z.record(tag, z.boolean()).default({}),
@@ -20,13 +23,15 @@ export const tabDefaultsSchema = z.strictObject({
 });
 export type TabDefaults = z.infer<typeof tabDefaultsSchema>;
 
-/** This whitelist intentionally excludes files, font IDs, text, and session selections. */
+/** This whitelist intentionally excludes files, font IDs, typed text, and session selections. */
 export const defaultsSchema = z.strictObject({
   version: z.literal(1),
   theme: z.enum(['system', 'light', 'dark']),
   /** Font order is shared by all tabs, so its initial sort is a single default. */
   sort: sortSchema.default('manual'),
   tabs: z.record(z.enum(tabIds), tabDefaultsSchema),
+  /** Default sample content of the text tabs; older payloads get the built-in texts. */
+  texts: textsSchema.default(createFactoryTexts),
 });
 export type AppDefaults = z.infer<typeof defaultsSchema>;
 
@@ -39,6 +44,7 @@ export function createFactoryDefaults(): AppDefaults {
       // Font size is shared by every tab, so no tab gets its own size.
       tabIds.map((id) => [id, tabDefaultsSchema.parse({})]),
     ) as AppDefaults['tabs'],
+    texts: createFactoryTexts(),
   };
 }
 

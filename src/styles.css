@@ -130,9 +130,10 @@
 @layer components {
   .button {
     @apply inline-flex items-center justify-center gap-2;
-    min-height: 28px;
+    min-height: 32px;
     border: 1px solid transparent;
-    padding: 4px 10px;
+    padding: 4px 12px;
+    font-size: 12px;
     color: var(--soft);
   }
   .button-secondary {
@@ -580,10 +581,16 @@
     gap: 12px;
     margin-bottom: 18px;
   }
-  .toolbar .icon-button {
-    width: 40px;
-    height: 40px;
-    padding: 8px;
+  /* Auto-typing: the text box sits above play / reset / speed in one panel. */
+  .typing-settings {
+    margin-bottom: 18px;
+  }
+  .typing-settings .text-field {
+    padding: 15px 15px 0;
+  }
+  .typing-settings .toolbar {
+    min-height: 0;
+    margin-bottom: 0;
   }
   .field {
     display: flex;
@@ -600,10 +607,29 @@
     background: var(--panel);
     width: 100%;
   }
+  /* Every sample-text box (weights, live typing, auto-typing) looks the same. */
+  .text-field .text-input {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .text-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    color: var(--soft);
+  }
+  .text-field-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
   .speed-field {
     position: relative;
     width: 142px;
-    height: 40px;
+    height: 32px;
     border: 1px solid var(--border-control);
   }
   .speed-field > span {
@@ -627,7 +653,8 @@
   .speed-field .icon-chevron {
     position: absolute;
     left: 8px;
-    top: 11px;
+    top: 50%;
+    transform: translateY(-50%);
     pointer-events: none;
   }
   .weights-tab {
@@ -635,25 +662,11 @@
     flex-direction: column;
     gap: 12px;
   }
-  .weights-input-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 12px;
-    color: var(--soft);
-  }
   .weights-count,
   .weights-legend-num {
     font-variant-numeric: tabular-nums;
     font-size: 11px;
     color: var(--muted);
-  }
-  .weights-input {
-    min-height: 56px;
-    resize: none;
-    padding: 14px 18px;
-    font-size: 16px;
   }
   .weights-stack {
     display: grid;
@@ -764,10 +777,11 @@
     flex-wrap: wrap;
     gap: 2px;
   }
-  .insert-key {
-    min-width: 28px;
-    padding: 2px 4px;
-    font-size: 14px;
+  .insert-key,
+  .joining-letter {
+    min-width: 32px;
+    padding: 2px 6px;
+    font-size: 16px;
   }
   /* On-screen keyboard (Arabic / Persian / Kurdish) under the live typing input. */
   .osk {
@@ -809,19 +823,51 @@
     flex-wrap: wrap;
     gap: 4px;
   }
-  .joining-letter {
-    min-width: 36px;
-    min-height: 36px;
-    padding: 2px 6px;
-    font-size: 17px;
+  .control-label {
+    margin-bottom: 8px;
+    color: var(--soft);
+    font-size: 12px;
+    font-weight: 300;
   }
+  .display-modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+  /* A small square showing how each display mode paints the glyphs. It uses
+     currentColor so it stays visible on the highlighted (selected) button. */
+  .display-swatch {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+  .display-swatch-solid {
+    background: currentColor;
+  }
+  .display-swatch-outline {
+    border: 1px solid currentColor;
+    background: color-mix(in srgb, currentColor 50%, transparent);
+  }
+  .size-presets {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .size-preset {
+    padding: 4px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .size-preset[aria-pressed='true'],
+  .display-mode[aria-pressed='true'],
   .joining-letter[aria-pressed='true'],
   .osk-key[aria-pressed='true'],
   .keyboard-toggle[aria-pressed='true'] {
     background: var(--primary);
     color: var(--on-primary);
   }
-  .toolbar:has(+ .preview-card-compact) {
+  .toolbar:has(+ .preview-card-compact),
+  .typing-settings:has(+ .preview-card-compact) {
     margin-bottom: 4px;
   }
   .modal {
@@ -832,6 +878,70 @@
     width: min(760px, calc(100vw - 48px));
     max-height: calc(100dvh - 64px);
     border: 1px solid var(--border-control);
+  }
+  /* Settings: default content of the text tabs, one section per tab. */
+  /* Header and footer stay put; only the text sections scroll. */
+  .modal-settings[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-settings-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .settings-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .settings-texts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+  .settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .settings-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--strong);
+  }
+  .settings-hint {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .settings-texts .text-input {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .settings-texts textarea.text-input {
+    display: block;
+    min-height: 84px;
+    line-height: 1.8;
+    resize: vertical;
+  }
+  .settings-footer {
+    display: flex;
+    flex-shrink: 0;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+  }
+  .about-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 4px;
   }
   .modal::backdrop {
     background: #03071180;
@@ -929,18 +1039,13 @@
   .glyph-detail-spacer {
     flex: 1;
   }
-  .glyph-layer-toggle {
-    padding: 4px 10px;
-    font-size: 12px;
-  }
-  /* The drawing board is white in both themes, like the glyph list. */
   .glyph-detail-preview {
     flex: 1;
     min-height: 380px;
     padding: 12px;
-    background: #fff;
+    background: var(--panel);
     border: 1px solid var(--line);
-    color: #111;
+    color: var(--ink);
   }
   .glyph-detail-svg {
     display: block;
@@ -950,17 +1055,17 @@
     min-height: 360px;
   }
   .glyph-guide {
-    stroke: #c4c9d2;
+    stroke: var(--border-control);
     stroke-width: 1;
     stroke-dasharray: 4 4;
     vector-effect: non-scaling-stroke;
   }
   .glyph-guide-baseline {
-    stroke: #6a7282;
+    stroke: var(--muted);
     stroke-dasharray: none;
   }
   .glyph-guide-label {
-    fill: #6a7282;
+    fill: var(--muted);
     font-family: var(--font-sans);
     user-select: none;
   }
@@ -978,12 +1083,12 @@
   }
   .glyph-outline {
     fill: none;
-    stroke: #111;
+    stroke: var(--ink);
     stroke-width: 1.25;
     vector-effect: non-scaling-stroke;
   }
   .glyph-outline-filled {
-    fill: rgb(17 17 17 / 14%);
+    fill: color-mix(in srgb, var(--ink) 14%, transparent);
   }
   .glyph-handle {
     stroke: #99a1af;
@@ -992,12 +1097,12 @@
   }
   .glyph-point {
     fill: #2563eb;
-    stroke: #fff;
+    stroke: var(--panel);
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
   }
   .glyph-point-off {
-    fill: #fff;
+    fill: var(--panel);
     stroke: #2563eb;
   }
   .glyph-start {
@@ -1149,36 +1254,23 @@
     flex-direction: column;
     gap: 12px;
   }
-  /* The glyph list and QA report sit on white, whatever the theme. */
   .glyphs-sheet {
-    --panel: #fff;
-    --line: #e2e2e2;
-    --muted: #666;
-    background: #fff;
-    color: #111;
+    background: var(--panel);
+    color: var(--ink);
   }
-  /* QA statuses keep their colours in every theme. */
   .qa-sheet {
     --qa-pass: #0e8a7c;
     --qa-warn: #b7791f;
     --qa-fail: #b42318;
   }
-  /* Each group is its own white card, whatever the theme; light-theme text
-     tokens keep headings readable on white in dark mode. */
-  .qa-group {
-    --panel: #fff;
-    --line: #e2e2e2;
-    --muted: #666;
-    --ink: #111;
-    --strong: #333;
-    --soft: #444;
-    background: #fff;
-    color: #111;
+  :root[data-theme='dark'] .qa-sheet {
+    --qa-pass: #2dd4bf;
+    --qa-warn: #f6ad55;
+    --qa-fail: #ff938a;
   }
-  .qa-filter {
-    min-height: 36px;
-    padding: 2px 12px;
-    font-size: 13px;
+  .qa-group {
+    background: var(--panel);
+    color: var(--ink);
   }
   .qa-filter-count {
     opacity: 0.65;
@@ -1232,11 +1324,6 @@
     color: var(--muted);
     line-height: 1.5;
   }
-  /* Diacritics cards are always white, whatever the theme. */
-  .diacritics-sheet {
-    --panel: #fff;
-    --line: #e2e2e2;
-  }
   .diacritics-sections {
     display: flex;
     flex-direction: column;
@@ -1245,15 +1332,15 @@
   /* Each mark (فتحه, کسره, …) is its own white card, apart from the others. */
   .diacritics-section {
     padding: 14px;
-    background: #fff;
-    color: #111;
+    background: var(--panel);
+    color: var(--ink);
     border: 1px solid var(--line);
   }
   .diacritics-section-title {
     margin: 0 0 10px;
     font-size: 13px;
     font-weight: 600;
-    color: #666;
+    color: var(--muted);
   }
   .diacritics-blocks {
     display: flex;

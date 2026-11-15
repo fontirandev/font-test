@@ -2,13 +2,13 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { createFactoryDefaults, type AppDefaults } from '../shared/settings';
 import { tabDefinitions } from '../shared/tabs';
 import { loadDefaults } from './lib/defaults-client';
+import { links } from './lib/links';
 import { loadFont, unloadFont, type LoadedFont } from './lib/fonts';
-import { createWorkspace, orderedFonts, workspaceReducer } from './state/workspace';
+import { createWorkspace, defaultText, orderedFonts, workspaceReducer } from './state/workspace';
 import { Button, Icon, IconButton, Modal } from './components/ui';
 import { Sidebar } from './components/Sidebar';
 import { TestViews } from './components/TestViews';
 import { SettingsDialog } from './components/SettingsDialog';
-import { DesignSystem } from './components/DesignSystem';
 import { readStoredTheme, resolveTheme, storeTheme } from './lib/theme';
 
 function useTheme(theme: AppDefaults['theme']) {
@@ -66,7 +66,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
   const [fonts, setFonts] = useState<LoadedFont[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [modal, setModal] = useState<'settings' | 'about' | 'design-system' | null>(null);
+  const [modal, setModal] = useState<'settings' | 'about' | null>(null);
   // A theme picked in this browser outlives reloads; saved defaults apply otherwise.
   const [theme, setTheme] = useState(() => readStoredTheme() ?? defaults.theme);
   const input = useRef<HTMLInputElement>(null);
@@ -265,6 +265,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
                 tab={tab}
                 fonts={activeFonts}
                 allFonts={fonts}
+                texts={defaults.texts}
                 dispatch={dispatch}
               />
             )}
@@ -274,44 +275,52 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
       {modal === 'settings' && (
         <SettingsDialog
           defaults={{ ...defaults, theme }}
-          currentTab={tabId}
-          currentSession={tab}
-          currentSort={workspace.sort}
           onClose={() => setModal(null)}
           onSaved={(value) => {
+            // Typing tabs still showing the old default pick up the new one.
+            for (const id of ['typing-test', 'live-typing'] as const) {
+              if (workspace.tabs[id].text === defaultText(id, defaults))
+                dispatch({ type: 'set-text', tab: id, text: defaultText(id, value) });
+            }
             setDefaults(value);
             setTheme(value.theme);
-            setMessage('پیش‌فرض‌ها ذخیره شدند. تنظیمات تب‌های باز بدون تغییر باقی ماندند.');
+            setMessage('متن‌های پیش‌فرض ذخیره شدند.');
           }}
         />
       )}
       {modal === 'about' && (
         <Modal title="درباره Font Desk" onClose={() => setModal(null)}>
           <p className="leading-8">
-            میز کار محلی برای طراحان فونت فارسی. فایل‌های فونت در حافظه مرورگر باز می‌شوند و به هیچ
-            سروری ارسال نمی‌شوند. تنها پیش‌فرض‌هایی که ذخیره می‌کنید در SQLite روی همین رایانه
-            نگهداری می‌شوند.
+            Font Desk ابزار تست فونتی است که برای کار روزانه‌ی تیم{' '}
+            <a className="about-link" href={links.fontiran} target="_blank" rel="noreferrer">
+              فونت‌ایران
+            </a>{' '}
+            ساخته شد و حالا به‌صورت متن‌باز در دسترس همه است.
           </p>
-          <p className="mt-4 leading-7 text-muted">
-            میانبر افزودن فایل: Ctrl / ⌘ + O. برای تغییر ترتیب فایل‌ها، دسته کنار نام را بکشید یا با
-            کلیدهای بالا و پایین جابجا کنید. انتخاب و ترتیب فونت‌ها برای هر تب مستقل است.
+          <p className="mt-3 leading-8 text-muted">
+            اگر ایده یا پیشنهادی برای بهتر شدنش دارید، خوشحال می‌شویم در تلگرام با ما در میان
+            بگذارید.
           </p>
-          <div className="mt-5 flex gap-3">
-            <Button onClick={() => setModal('design-system')}>
-              سیستم طراحی و حالت‌های غیرفعال
-            </Button>
+          <div className="mt-5 flex flex-wrap gap-3">
             <a
-              className="button"
-              href="https://github.com/mojtabaem/FontiranFontTester"
+              className="button button-secondary"
+              href={links.repository}
               target="_blank"
               rel="noreferrer"
             >
-              نسخه پیشین
+              کد منبع در گیت‌هاب
+            </a>
+            <a
+              className="button button-primary"
+              href={links.telegram}
+              target="_blank"
+              rel="noreferrer"
+            >
+              پیام در تلگرام
             </a>
           </div>
         </Modal>
       )}
-      {modal === 'design-system' && <DesignSystem onClose={() => setModal(null)} />}
     </>
   );
 }

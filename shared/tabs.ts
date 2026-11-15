@@ -3,12 +3,12 @@ export const tabDefinitions = [
   {
     id: 'typing-test',
     title: 'تایپ خودکار',
-    controls: ['fontSize', 'direction', 'alignment', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
   },
   {
     id: 'live-typing',
     title: 'تایپ',
-    controls: ['fontSize', 'direction', 'alignment', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
   },
   {
     id: 'weights',
@@ -18,31 +18,31 @@ export const tabDefinitions = [
   {
     id: 'languages',
     title: 'زبان‌ها',
-    controls: ['fontSize', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
   {
     id: 'diacritics',
     title: 'اعراب',
-    controls: ['fontSize', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
   {
     id: 'characters',
     title: 'کاراکترها',
-    controls: ['fontSize', 'showMissing', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'showMissing', 'features', 'axes'],
     singleFont: true,
   },
   {
     id: 'connections',
     title: 'اتصالات',
-    controls: ['fontSize', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
   {
     id: 'zwnj',
     title: 'نیم‌فاصله',
-    controls: ['fontSize', 'features', 'axes'],
+    controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
   { id: 'glyphs', title: 'لیست گلیف‌ها', controls: [], singleFont: true },

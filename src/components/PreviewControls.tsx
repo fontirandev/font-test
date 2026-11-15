@@ -2,7 +2,15 @@ import { supportsControl, type TabId } from '../../shared/tabs';
 import type { PreviewSettings } from '../../shared/settings';
 import type { TabSession } from '../state/workspace';
 import type { LoadedFont } from '../lib/fonts';
-import { Slider, Toggle } from './ui';
+import { Button, Slider, Toggle } from './ui';
+
+const displayModes: { id: PreviewSettings['display']; label: string }[] = [
+  { id: 'solid', label: 'Solid' },
+  { id: 'outline', label: 'Outline' },
+];
+
+/** One-click font sizes (pt) under the size slider. */
+const sizePresets = [16, 24, 48, 64, 124, 248];
 
 /**
  * Optional (discretionary) OpenType features a designer turns on or off while testing.
@@ -69,6 +77,27 @@ export function PreviewControls({
   const permitted = (key: keyof PreviewSettings) => supportsControl(tabId, key);
   return (
     <div dir="ltr">
+      {permitted('display') && (
+        <div className="control-section">
+          <div className="control-label" id="display-label">
+            Display
+          </div>
+          <div className="display-modes" role="group" aria-labelledby="display-label">
+            {displayModes.map(({ id, label }) => (
+              <Button
+                key={id}
+                className="display-mode"
+                aria-pressed={c.display === id}
+                disabled={disabled}
+                onClick={() => onChange({ display: id })}
+              >
+                <span className={`display-swatch display-swatch-${id}`} aria-hidden="true" />
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       {permitted('fontSize') && (
         <div className="control-section size-section">
           <Slider
@@ -80,6 +109,20 @@ export function PreviewControls({
             disabled={disabled}
             onChange={(fontSize) => onChange({ fontSize })}
           />
+          <div className="size-presets" role="group" aria-label="Font size presets">
+            {sizePresets.map((size) => (
+              <Button
+                key={size}
+                className="size-preset"
+                aria-pressed={c.fontSize === size}
+                title={`${size} pt`}
+                disabled={disabled}
+                onClick={() => onChange({ fontSize: size })}
+              >
+                {size}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
       {permitted('features') &&

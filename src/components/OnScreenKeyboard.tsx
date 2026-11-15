@@ -75,15 +75,6 @@ export function OnScreenKeyboard({
         >
           فاصله
         </Button>
-        <Button
-          className="osk-key osk-key-wide"
-          disabled={disabled}
-          title="Enter"
-          onMouseDown={keepFocus}
-          onClick={() => onInsert('\n')}
-        >
-          ↵
-        </Button>
       </div>
     </div>
   );

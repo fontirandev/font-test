@@ -48,7 +48,7 @@ test('font size and variable axes are shared by every tab that offers them', () 
     tab: 'weights',
     defaults: createFactoryDefaults(),
   });
-  assert.equal(state.tabs['typing-test'].controls.fontSize, 16);
+  assert.equal(state.tabs['typing-test'].controls.fontSize, 48);
 });
 test('font order and sort are shared by every tab and never mutate the font array', () => {
   let state = workspaceReducer(setup(), { type: 'set-sort', sort: 'weight-asc' });

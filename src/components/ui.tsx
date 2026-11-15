@@ -1,5 +1,12 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { iconSizes, iconSrc, imageIcon, type IconName } from '../lib/icons';
 
 export type { IconName };
@@ -96,6 +103,16 @@ export function Slider({
   onChange: (value: number) => void;
 }) {
   const id = useId();
+  // While typing, keep the raw text so a partial value (the "4" of "48") is not
+  // clamped to the minimum mid-edit; clamp only when the field is left.
+  const [draft, setDraft] = useState<string | null>(null);
+  const clamp = (n: number) => Math.max(min, Math.min(max, n));
+  const commit = () => {
+    if (draft === null) return;
+    const n = Number(draft);
+    if (draft.trim() !== '' && Number.isFinite(n) && clamp(n) !== value) onChange(clamp(n));
+    setDraft(null);
+  };
   return (
     <div className={`slider-control ${compact ? 'compact' : ''}`} dir="ltr">
       <div className="flex items-center justify-between gap-2">
@@ -107,11 +124,17 @@ export function Slider({
             min={min}
             max={max}
             step={step}
-            value={value}
+            value={draft ?? value}
             disabled={disabled}
             onChange={(e) => {
+              setDraft(e.target.value);
               const n = e.target.valueAsNumber;
-              if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, n)));
+              // Typed values apply live once they are in range.
+              if (Number.isFinite(n) && n >= min && n <= max) onChange(n);
+            }}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
             }}
           />
           {unit && <span>{unit}</span>}
@@ -135,11 +158,13 @@ export function Modal({
   children,
   onClose,
   className = '',
+  bodyClassName = 'p-5',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   className?: string;
+  bodyClassName?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -165,7 +190,7 @@ export function Modal({
         </h2>
         <IconButton icon="close" label="بستن" variant="ghost" onClick={onClose} />
       </div>
-      <div className="p-5">{children}</div>
+      <div className={bodyClassName}>{children}</div>
     </dialog>,
     document.body,
   );

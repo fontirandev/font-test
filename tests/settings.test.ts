@@ -70,3 +70,53 @@ test('only loopback and explicitly configured hosts are allowed', async () => {
   assert.equal(isAllowedHost(request(undefined), hosts), false);
   assert.equal(allowedHosts(8030).size, 2);
 });
+
+test('default texts: old payloads get the built-in texts, saved texts survive a round trip', async () => {
+  const { normalizeDefaults } = await import('../shared/settings');
+  const { createFactoryTexts, parseCharacters, parseZwnjWords, TEXT_MAX } =
+    await import('../shared/texts');
+  // A payload saved before texts existed (like the test server's) still loads.
+  const legacy = createFactoryDefaults() as Partial<ReturnType<typeof createFactoryDefaults>>;
+  delete legacy.texts;
+  assert.deepEqual(normalizeDefaults(legacy).texts, createFactoryTexts());
+  // Edited texts are kept.
+  const defaults = createFactoryDefaults();
+  defaults.texts.typingTest = 'سلام';
+  defaults.texts.languages.urdu = 'اردو';
+  const repository = new SettingsRepository(':memory:');
+  try {
+    repository.save(defaults);
+    assert.equal(repository.read().texts.typingTest, 'سلام');
+    assert.equal(repository.read().texts.languages.urdu, 'اردو');
+    // Unknown text keys and oversized texts are rejected.
+    assert.throws(() =>
+      repository.save({ ...defaults, texts: { ...defaults.texts, weights: 'x' } }),
+    );
+    assert.throws(() =>
+      repository.save({
+        ...defaults,
+        texts: { ...defaults.texts, characters: 'x'.repeat(TEXT_MAX + 1) },
+      }),
+    );
+  } finally {
+    repository.close();
+  }
+  // Every field at its limit still fits the server's 64 KB request limit.
+  const full = createFactoryDefaults();
+  const big = 'ب'.repeat(TEXT_MAX);
+  full.texts = {
+    typingTest: big,
+    liveTyping: big,
+    languages: { arabic: big, quran: big, urdu: big, kurdish: big },
+    characters: big,
+    zwnjPersian: big,
+    zwnjArabic: big,
+  };
+  assert.ok(Buffer.byteLength(JSON.stringify(full)) < 64 * 1024);
+  // Parsing helpers.
+  assert.deepEqual(parseCharacters(' ۱  ۲\nالله ۱ '), ['۱', '۲', 'الله']);
+  assert.deepEqual(parseZwnjWords('می‌روم\n\n  هم‌زمان '), [
+    ['می‌روم', 'میروم', 'می روم'],
+    ['هم‌زمان', 'همزمان', 'هم زمان'],
+  ]);
+});

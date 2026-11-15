@@ -1,48 +1,47 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import type { AppDefaults } from '../../shared/settings';
+import { tabDefinitions, type TabId } from '../../shared/tabs';
 import {
-  createFactoryDefaults,
-  type AppDefaults,
-  type FontSort,
-  type PreviewSettings,
-} from '../../shared/settings';
-import { supportsControl, tabDefinitions, type TabId } from '../../shared/tabs';
-import type { TabSession } from '../state/workspace';
+  TEXT_MAX,
+  createFactoryTexts,
+  languageSheets,
+  toSingleLine,
+  type DefaultTexts,
+} from '../../shared/texts';
 import { saveDefaults } from '../lib/defaults-client';
-import { Button, Modal, Slider, Toggle } from './ui';
+import { Button, Modal } from './ui';
 
+const tabTitle = (id: TabId) => tabDefinitions.find((tab) => tab.id === id)!.title;
+
+function Section({ tab, hint, children }: { tab: TabId; hint?: string; children: ReactNode }) {
+  return (
+    <section className="settings-section">
+      <h3>{tabTitle(tab)}</h3>
+      {hint && <p className="settings-hint">{hint}</p>}
+      {children}
+    </section>
+  );
+}
+
+/** Default sample content of the text tabs, saved for every later session. */
 export function SettingsDialog({
   defaults,
-  currentTab,
-  currentSession,
-  currentSort,
   onSaved,
   onClose,
 }: {
   defaults: AppDefaults;
-  currentTab: TabId;
-  currentSession: TabSession;
-  currentSort: FontSort;
   onSaved: (defaults: AppDefaults) => void;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState(() => structuredClone(defaults));
-  const [tabId, setTabId] = useState(currentTab);
+  const [texts, setTexts] = useState<DefaultTexts>(() => structuredClone(defaults.texts));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const tab = draft.tabs[tabId];
-  const patch = (changes: Partial<PreviewSettings>) =>
-    setDraft((value) => ({
-      ...value,
-      tabs: {
-        ...value.tabs,
-        [tabId]: { ...value.tabs[tabId], controls: { ...value.tabs[tabId].controls, ...changes } },
-      },
-    }));
+  const set = (patch: Partial<DefaultTexts>) => setTexts((value) => ({ ...value, ...patch }));
   async function save() {
     setSaving(true);
     setError('');
     try {
-      onSaved(await saveDefaults(draft));
+      onSaved(await saveDefaults({ ...defaults, texts }));
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ذخیره انجام نشد.');
@@ -52,150 +51,106 @@ export function SettingsDialog({
   }
   return (
     <Modal
-      title="تنظیمات پیش‌فرض"
+      title="متن‌های پیش‌فرض"
+      className="modal-settings"
+      bodyClassName="modal-settings-body"
       onClose={() => {
         if (!saving) onClose();
       }}
     >
-      <p className="mb-5 leading-7 text-muted">
-        این تنظیمات برای شروع جلسه‌های بعد ذخیره می‌شوند. فایل‌ها، متن آزمایش و انتخاب یا ترتیب
-        فونت‌های جلسه ذخیره نمی‌شوند.
-      </p>
-      <fieldset disabled={saving} className="space-y-5">
-        <label className="field">
-          پوسته
-          <select
-            value={draft.theme}
-            onChange={(e) => setDraft({ ...draft, theme: e.target.value as AppDefaults['theme'] })}
-          >
-            <option value="system">همگام با سیستم</option>
-            <option value="light">روشن</option>
-            <option value="dark">تاریک</option>
-          </select>
-        </label>
-        <label className="field">
-          مرتب‌سازی اولیه فونت‌ها
-          <select
-            value={draft.sort}
-            onChange={(e) => setDraft({ ...draft, sort: e.target.value as FontSort })}
-          >
-            <option value="manual">ترتیب افزودن فایل</option>
-            <option value="weight-asc">وزن: سبک به سنگین</option>
-            <option value="weight-desc">وزن: سنگین به سبک</option>
-            <option value="name-asc">نام: صعودی</option>
-            <option value="name-desc">نام: نزولی</option>
-          </select>
-        </label>
-        <label className="field">
-          پیش‌فرض تب
-          <select value={tabId} onChange={(e) => setTabId(e.target.value as TabId)}>
-            {tabDefinitions.map((definition) => (
-              <option value={definition.id} key={definition.id}>
-                {definition.title}
-              </option>
+      <div className="settings-scroll">
+        <fieldset disabled={saving} className="settings-texts">
+          <Section tab="typing-test">
+            <input
+              type="text"
+              aria-label={`متن ${tabTitle('typing-test')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              value={texts.typingTest}
+              onChange={(e) => set({ typingTest: toSingleLine(e.target.value) })}
+            />
+          </Section>
+          <Section tab="live-typing">
+            <input
+              type="text"
+              aria-label={`متن ${tabTitle('live-typing')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              value={texts.liveTyping}
+              onChange={(e) => set({ liveTyping: toSingleLine(e.target.value) })}
+            />
+          </Section>
+          <Section tab="languages">
+            {languageSheets.map((sheet) => (
+              <label className="field" key={sheet.id}>
+                {sheet.title}
+                <textarea
+                  className="text-input"
+                  maxLength={TEXT_MAX}
+                  lang={sheet.lang}
+                  dir="rtl"
+                  value={texts.languages[sheet.id]}
+                  onChange={(e) =>
+                    set({ languages: { ...texts.languages, [sheet.id]: e.target.value } })
+                  }
+                />
+              </label>
             ))}
-          </select>
-        </label>
-        <div className="grid grid-cols-2 gap-5">
-          <div dir="ltr">
-            <Toggle
-              label="Activate newly added fonts"
-              checked={tab.activateNewFonts}
-              onChange={(activateNewFonts) =>
-                setDraft({
-                  ...draft,
-                  tabs: { ...draft.tabs, [tabId]: { ...tab, activateNewFonts } },
-                })
-              }
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-5" dir="ltr">
-          {supportsControl(tabId, 'fontSize') && (
-            <Slider
-              label="Font size (all tabs)"
-              value={tab.controls.fontSize}
-              min={8}
-              max={300}
-              unit="pt"
-              onChange={(fontSize) =>
-                // Font size is shared by every tab, so its default is too.
-                setDraft((value) => ({
-                  ...value,
-                  tabs: Object.fromEntries(
-                    Object.entries(value.tabs).map(([id, t]) => [
-                      id,
-                      { ...t, controls: { ...t.controls, fontSize } },
-                    ]),
-                  ) as AppDefaults['tabs'],
-                }))
-              }
-            />
-          )}
-          {supportsControl(tabId, 'showMissing') && (
-            <Toggle
-              label="Show missing characters"
-              checked={tab.controls.showMissing}
-              onChange={(showMissing) => patch({ showMissing })}
-            />
-          )}
-        </div>
-        {supportsControl(tabId, 'direction') && (
-          <label className="field">
-            جهت متن
-            <select
-              value={tab.controls.direction}
-              onChange={(e) => patch({ direction: e.target.value as PreviewSettings['direction'] })}
-            >
-              <option value="rtl">راست به چپ</option>
-              <option value="ltr">چپ به راست</option>
-            </select>
-          </label>
-        )}
-        {supportsControl(tabId, 'alignment') && (
-          <label className="field">
-            تراز متن
-            <select
-              value={tab.controls.alignment}
-              onChange={(e) => patch({ alignment: e.target.value as PreviewSettings['alignment'] })}
-            >
-              <option value="start">ابتدا</option>
-              <option value="center">وسط</option>
-              <option value="end">انتها</option>
-              <option value="justify">تراز دوطرفه</option>
-            </select>
-          </label>
-        )}
-        <div className="flex gap-3">
-          <Button
-            disabled={tabId !== currentTab}
-            onClick={() =>
-              setDraft((value) => ({
-                ...value,
-                sort: currentSort,
-                tabs: {
-                  ...value.tabs,
-                  [tabId]: {
-                    ...value.tabs[tabId],
-                    controls: structuredClone(currentSession.controls),
-                  },
-                },
-              }))
-            }
+          </Section>
+          <Section
+            tab="characters"
+            hint="کاراکترها را با فاصله جدا کنید؛ چند حرف بدون فاصله (مثل الله) یک خانه می‌شوند."
           >
-            استفاده از تنظیمات تب باز
-          </Button>
-          <Button onClick={() => setDraft(createFactoryDefaults())}>
-            بازگردانی پیش‌فرض‌های برنامه
-          </Button>
-        </div>
-      </fieldset>
+            <textarea
+              aria-label={`متن ${tabTitle('characters')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              dir="rtl"
+              value={texts.characters}
+              onChange={(e) => set({ characters: e.target.value })}
+            />
+          </Section>
+          <Section
+            tab="zwnj"
+            hint="هر خط یک کلمه با نیم‌فاصله؛ ستون‌های «بدون فاصله» و «فاصله معمولی» خودکار ساخته می‌شوند."
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <label className="field">
+                فارسی
+                <textarea
+                  className="text-input"
+                  maxLength={TEXT_MAX}
+                  lang="fa"
+                  dir="rtl"
+                  value={texts.zwnjPersian}
+                  onChange={(e) => set({ zwnjPersian: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                عربی
+                <textarea
+                  className="text-input"
+                  maxLength={TEXT_MAX}
+                  lang="ar"
+                  dir="rtl"
+                  value={texts.zwnjArabic}
+                  onChange={(e) => set({ zwnjArabic: e.target.value })}
+                />
+              </label>
+            </div>
+          </Section>
+        </fieldset>
+      </div>
       {error && (
-        <p role="alert" className="mt-4 text-[var(--danger)]">
+        <p role="alert" className="px-5 pb-3 text-[var(--danger)]">
           {error}
         </p>
       )}
-      <div className="mt-6 flex justify-end gap-3 border-t border-line pt-4">
+      <div className="settings-footer">
+        <Button disabled={saving} onClick={() => setTexts(createFactoryTexts())}>
+          بازگردانی متن‌های اصلی
+        </Button>
+        <span className="flex-1" />
         <Button disabled={saving} onClick={onClose}>
           انصراف
         </Button>
@@ -206,7 +161,7 @@ export function SettingsDialog({
             void save();
           }}
         >
-          {saving ? 'در حال ذخیره…' : 'ذخیره پیش‌فرض‌ها'}
+          {saving ? 'در حال ذخیره…' : 'ذخیره'}
         </Button>
       </div>
     </Modal>

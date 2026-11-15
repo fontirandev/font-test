@@ -5,6 +5,7 @@ import {
   type PreviewSettings,
 } from '../../shared/settings';
 import { isSingleFont, supportsControl, tabIds, type TabId } from '../../shared/tabs';
+import { sampleText, toSingleLine } from '../../shared/texts';
 
 export interface FontIdentity {
   id: string;
@@ -28,22 +29,27 @@ export interface Workspace extends FontOrdering {
   currentTab: TabId;
   tabs: Record<TabId, TabSession>;
 }
-export const sampleText =
-  'به تماشای جهان بنشین؛ هر حرف، پنجره‌ای به دنیایی تازه است.\nطراحی حروف فارسی، پیوندی میان خوانایی و زیبایی است.';
-
 /** Short sample for overlaying weights; the old tester used the same word. */
 export const weightsSampleText = 'آبنوس وزن';
 export const WEIGHTS_TEXT_MAX = 32;
 
-export function defaultText(id: TabId): string {
-  return id === 'weights' ? weightsSampleText : sampleText;
+/** The typing tabs edit their text in a single-line field. */
+export const singleLineTabs: readonly TabId[] = ['typing-test', 'live-typing', 'weights'];
+export { toSingleLine };
+
+/** Starting text of a tab: the saved default for the typing tabs, built-in otherwise. */
+export function defaultText(id: TabId, defaults: AppDefaults): string {
+  if (id === 'weights') return weightsSampleText;
+  if (id === 'typing-test') return toSingleLine(defaults.texts.typingTest);
+  if (id === 'live-typing') return toSingleLine(defaults.texts.liveTyping);
+  return sampleText;
 }
 
 /**
  * Controls that follow the user across tabs: changing one in any tab changes it in
  * every tab that offers it. Everything else in `controls` stays per tab.
  */
-export const sharedControls = ['fontSize', 'axes'] as const;
+export const sharedControls = ['display', 'fontSize', 'axes'] as const;
 type SharedControl = (typeof sharedControls)[number];
 
 function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings> {
@@ -92,7 +98,7 @@ export function createWorkspace(defaults: AppDefaults): Workspace {
                 Object.entries(shared).filter(([key]) => supportsControl(id, key as SharedControl)),
               ),
             },
-            text: defaultText(id),
+            text: defaultText(id, defaults),
             typing: { position: 0, speed: 3 },
           },
         ];
@@ -190,7 +196,7 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
       next = {
         ...tab,
         controls: defaults.controls,
-        text: defaultText(action.tab),
+        text: defaultText(action.tab, action.defaults),
       };
       return {
         ...state,

@@ -1,5 +1,5 @@
 import { useState, type Dispatch } from 'react';
-import type { TabId } from '../../shared/tabs';
+import { tabDefinitions, type TabId } from '../../shared/tabs';
 import {
   orderedFonts,
   type FontOrdering,
@@ -37,6 +37,7 @@ export function Sidebar({
   const canReorder = !loading && fonts.length > 1;
   const [filesOpen, setFilesOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const hasControls = tabDefinitions.find(({ id }) => id === tabId)!.controls.length > 0;
   const sorted = orderedFonts(fonts, ordering);
   const activeCount = fonts.filter((font) => tab.active[font.id]).length;
   const move = (id: string, before: string) =>
@@ -188,19 +189,22 @@ export function Sidebar({
           </div>
         </div>
       </div>
-      <div className="section-heading border-t border-line">
-        <h2>تنظیمات</h2>
-        {fonts.length > 0 && (
-          <IconButton
-            icon="collapse"
-            label={settingsOpen ? 'بستن تنظیمات تب' : 'نمایش تنظیمات تب'}
-            aria-expanded={settingsOpen}
-            variant="ghost"
-            onClick={() => setSettingsOpen(!settingsOpen)}
-          />
-        )}
-      </div>
-      {fonts.length > 0 && (
+      {/* Tabs without controls (glyph list, metadata) have no settings section. */}
+      {hasControls && (
+        <div className="section-heading border-t border-line">
+          <h2>تنظیمات</h2>
+          {fonts.length > 0 && (
+            <IconButton
+              icon="collapse"
+              label={settingsOpen ? 'بستن تنظیمات تب' : 'نمایش تنظیمات تب'}
+              aria-expanded={settingsOpen}
+              variant="ghost"
+              onClick={() => setSettingsOpen(!settingsOpen)}
+            />
+          )}
+        </div>
+      )}
+      {hasControls && fonts.length > 0 && (
         <div className="collapsible" data-open={settingsOpen} inert={!settingsOpen}>
           <div className="collapsible-inner">
             <PreviewControls

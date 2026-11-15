@@ -39,7 +39,42 @@ export function defaultText(id: TabId): string {
   return id === 'weights' ? weightsSampleText : sampleText;
 }
 
+/**
+ * Controls that follow the user across tabs: changing one in any tab changes it in
+ * every tab that offers it. Everything else in `controls` stays per tab.
+ */
+export const sharedControls = ['fontSize', 'axes'] as const;
+type SharedControl = (typeof sharedControls)[number];
+
+function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings> {
+  return Object.fromEntries(
+    sharedControls.filter((key) => key in controls).map((key) => [key, controls[key]]),
+  );
+}
+
+/** Apply shared control values to every tab that supports them. */
+function applyShared(
+  tabs: Workspace['tabs'],
+  values: Partial<Pick<PreviewSettings, SharedControl>>,
+): Workspace['tabs'] {
+  const next = { ...tabs };
+  for (const id of tabIds) {
+    const patch = Object.fromEntries(
+      Object.entries(values).filter(([key]) => supportsControl(id, key as SharedControl)),
+    );
+    if (Object.keys(patch).length)
+      next[id] = { ...next[id], controls: { ...next[id].controls, ...patch } };
+  }
+  return next;
+}
+
+/** Shared controls start from the first tab's defaults, so all tabs agree. */
+function sharedDefaults(defaults: AppDefaults) {
+  return pickShared(getTabDefaults(defaults, tabIds[0]).controls);
+}
+
 export function createWorkspace(defaults: AppDefaults): Workspace {
+  const shared = sharedDefaults(defaults);
   return {
     currentTab: 'typing-test',
     order: [],
@@ -51,7 +86,12 @@ export function createWorkspace(defaults: AppDefaults): Workspace {
           id,
           {
             active: {} as Record<string, boolean>,
-            controls: tab.controls,
+            controls: {
+              ...tab.controls,
+              ...Object.fromEntries(
+                Object.entries(shared).filter(([key]) => supportsControl(id, key as SharedControl)),
+              ),
+            },
             text: defaultText(id),
             typing: { position: 0, speed: 3 },
           },
@@ -134,7 +174,10 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         ),
       );
       next = { ...tab, controls: { ...tab.controls, ...patch } };
-      break;
+      return {
+        ...state,
+        tabs: applyShared({ ...state.tabs, [action.tab]: next }, pickShared(patch)),
+      };
     }
     case 'set-text':
       next = { ...tab, text: action.text, typing: { ...tab.typing, position: 0 } };
@@ -149,7 +192,10 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         controls: defaults.controls,
         text: defaultText(action.tab),
       };
-      break;
+      return {
+        ...state,
+        tabs: applyShared({ ...state.tabs, [action.tab]: next }, sharedDefaults(action.defaults)),
+      };
     }
   }
   return { ...state, tabs: { ...state.tabs, [action.tab]: next } };

@@ -22,13 +22,33 @@ test('font activation, controls and text are isolated per tab', () => {
   state = workspaceReducer(state, {
     type: 'set-controls',
     tab: 'typing-test',
-    patch: { fontSize: 72 },
+    patch: { direction: 'ltr' },
   });
   state = workspaceReducer(state, { type: 'set-text', tab: 'typing-test', text: 'آزمایش' });
   assert.deepEqual(state.tabs['live-typing'], untouched);
   assert.equal(state.tabs['typing-test'].active.a, false);
   assert.deepEqual(state.order, ['b', 'a']);
   assert.equal(initial.tabs['typing-test'].active.a, true);
+});
+test('font size and variable axes are shared by every tab that offers them', () => {
+  let state = workspaceReducer(setup(), {
+    type: 'set-controls',
+    tab: 'connections',
+    patch: { fontSize: 72, axes: { wght: 700, CNTR: 40 }, features: { ss01: true } },
+  });
+  for (const id of tabIds) {
+    const { controls } = state.tabs[id];
+    if (supportsControl(id, 'fontSize')) assert.equal(controls.fontSize, 72, id);
+    if (supportsControl(id, 'axes')) assert.deepEqual(controls.axes, { wght: 700, CNTR: 40 }, id);
+  }
+  // Features stay per tab.
+  assert.equal(state.tabs['typing-test'].controls.features.ss01, undefined);
+  state = workspaceReducer(state, {
+    type: 'reset-tab',
+    tab: 'weights',
+    defaults: createFactoryDefaults(),
+  });
+  assert.equal(state.tabs['typing-test'].controls.fontSize, 16);
 });
 test('font order and sort are shared by every tab and never mutate the font array', () => {
   let state = workspaceReducer(setup(), { type: 'set-sort', sort: 'weight-asc' });
@@ -161,6 +181,7 @@ test('single-font tabs keep at most one font on', () => {
   let state = setup();
   assert.deepEqual(state.tabs.characters.active, { a: true, b: false });
   assert.deepEqual(state.tabs.languages.active, { a: true, b: false });
+  assert.deepEqual(state.tabs.glyphs.active, { a: true, b: false });
   state = workspaceReducer(state, {
     type: 'add-fonts',
     fonts: [{ id: 'c', name: 'C', weight: 400 }],

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { iconSizes, iconSrc, imageIcon, type IconName } from '../lib/icons';
 
@@ -133,10 +134,12 @@ export function Modal({
   title,
   children,
   onClose,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -145,7 +148,8 @@ export function Modal({
     element.showModal();
     return () => element.close();
   }, []);
-  return (
+  // Rendered at the document root so it takes the app theme, not overrides from where it opens.
+  return createPortal(
     <dialog
       ref={dialog}
       aria-labelledby={titleId}
@@ -153,7 +157,7 @@ export function Modal({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="modal"
+      className={`modal ${className}`}
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <h2 id={titleId} className="text-base font-semibold">
@@ -162,6 +166,7 @@ export function Modal({
         <IconButton icon="close" label="بستن" variant="ghost" onClick={onClose} />
       </div>
       <div className="p-5">{children}</div>
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }

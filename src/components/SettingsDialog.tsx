@@ -113,12 +113,23 @@ export function SettingsDialog({
         <div className="grid grid-cols-2 gap-5" dir="ltr">
           {supportsControl(tabId, 'fontSize') && (
             <Slider
-              label="Font size"
+              label="Font size (all tabs)"
               value={tab.controls.fontSize}
               min={8}
               max={300}
               unit="pt"
-              onChange={(fontSize) => patch({ fontSize })}
+              onChange={(fontSize) =>
+                // Font size is shared by every tab, so its default is too.
+                setDraft((value) => ({
+                  ...value,
+                  tabs: Object.fromEntries(
+                    Object.entries(value.tabs).map(([id, t]) => [
+                      id,
+                      { ...t, controls: { ...t.controls, fontSize } },
+                    ]),
+                  ) as AppDefaults['tabs'],
+                }))
+              }
             />
           )}
           {supportsControl(tabId, 'showMissing') && (
@@ -126,13 +137,6 @@ export function SettingsDialog({
               label="Show missing characters"
               checked={tab.controls.showMissing}
               onChange={(showMissing) => patch({ showMissing })}
-            />
-          )}
-          {supportsControl(tabId, 'onlyIssues') && (
-            <Toggle
-              label="Only warnings and failures"
-              checked={tab.controls.onlyIssues}
-              onChange={(onlyIssues) => patch({ onlyIssues })}
             />
           )}
         </div>

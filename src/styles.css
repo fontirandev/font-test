@@ -801,6 +801,21 @@
     flex-grow: 8;
     font-size: 12px;
   }
+  .toolbar-joining {
+    min-height: 0;
+  }
+  .joining-letters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .joining-letter {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 2px 6px;
+    font-size: 17px;
+  }
+  .joining-letter[aria-pressed='true'],
   .osk-key[aria-pressed='true'],
   .keyboard-toggle[aria-pressed='true'] {
     background: var(--primary);
@@ -838,12 +853,44 @@
     font-weight: 400;
     width: 30%;
   }
+  .metadata-table-wrap {
+    overflow-x: auto;
+  }
+  .metadata-table th[scope='col'] {
+    color: var(--ink);
+    font-weight: 600;
+    width: auto;
+    white-space: nowrap;
+  }
+  /* Field names stay pinned on the left while the font columns scroll. */
+  .metadata-table th[scope='row'],
+  .metadata-table thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    width: 1%;
+    white-space: nowrap;
+    background: var(--panel);
+    box-shadow: inset -1px 0 0 var(--line);
+  }
+  .metadata-table td {
+    min-width: 180px;
+    vertical-align: top;
+  }
+  .zwnj-table {
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+  }
   .glyph-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   }
   .glyph-cell {
     min-height: 100px;
+    /* All glyphs are listed at once; skip layout/paint for cells off screen. */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
     padding: 12px 6px;
     border: 1px solid var(--line);
     text-align: center;
@@ -856,6 +903,206 @@
     font: 10px monospace;
     color: var(--muted);
     margin-top: 10px;
+  }
+  /* Glyph detail: outline with metric lines and points beside its properties. */
+  .modal-wide {
+    width: min(1080px, calc(100vw - 48px));
+  }
+  .glyph-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(260px, 1fr);
+    gap: 20px;
+    max-height: calc(100dvh - 160px);
+  }
+  .glyph-detail-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .glyph-detail-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .glyph-detail-spacer {
+    flex: 1;
+  }
+  .glyph-layer-toggle {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  /* The drawing board is white in both themes, like the glyph list. */
+  .glyph-detail-preview {
+    flex: 1;
+    min-height: 380px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    color: #111;
+  }
+  .glyph-detail-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-height: calc(100dvh - 300px);
+    min-height: 360px;
+  }
+  .glyph-guide {
+    stroke: #c4c9d2;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+  }
+  .glyph-guide-baseline {
+    stroke: #6a7282;
+    stroke-dasharray: none;
+  }
+  .glyph-guide-label {
+    fill: #6a7282;
+    font-family: var(--font-sans);
+    user-select: none;
+  }
+  .glyph-advance {
+    stroke: #00a896;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .glyph-bbox {
+    fill: none;
+    stroke: #f59e0b;
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .glyph-outline {
+    fill: none;
+    stroke: #111;
+    stroke-width: 1.25;
+    vector-effect: non-scaling-stroke;
+  }
+  .glyph-outline-filled {
+    fill: rgb(17 17 17 / 14%);
+  }
+  .glyph-handle {
+    stroke: #99a1af;
+    stroke-width: 0.75;
+    vector-effect: non-scaling-stroke;
+  }
+  .glyph-point {
+    fill: #2563eb;
+    stroke: #fff;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .glyph-point-off {
+    fill: #fff;
+    stroke: #2563eb;
+  }
+  .glyph-start {
+    fill: #dc2626;
+  }
+  .glyph-detail-legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+  }
+  .glyph-detail-legend i {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-inline-end: 4px;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+  .legend-on {
+    background: #2563eb;
+  }
+  .legend-off {
+    border: 1.5px solid #2563eb;
+  }
+  .legend-start {
+    background: #dc2626;
+    border-radius: 0 !important;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+  .glyph-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    overflow: auto;
+  }
+  .glyph-props {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+  .glyph-prop {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .glyph-prop dt {
+    color: var(--muted);
+  }
+  .glyph-prop dd {
+    margin: 0;
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+    text-align: end;
+    word-break: break-all;
+  }
+  .glyph-detail-char {
+    font-family: var(--font-sans);
+    font-size: 18px;
+  }
+  .glyph-detail-heading {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .glyph-components {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+  }
+  .glyph-component-link {
+    color: var(--accent);
+    text-decoration: underline;
+    font-family: ui-monospace, monospace;
+  }
+  .glyph-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .glyph-contour-data {
+    margin: 0;
+    max-height: 260px;
+    overflow: auto;
+    padding: 10px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    font:
+      12px/1.5 ui-monospace,
+      monospace;
+    white-space: pre;
+  }
+  @media (max-width: 760px) {
+    .glyph-detail {
+      grid-template-columns: 1fr;
+      max-height: none;
+    }
+    .glyph-detail-preview,
+    .glyph-detail-svg {
+      min-height: 260px;
+    }
   }
   /* Coverage sheet: the glyph in the tested font, the same character in the UI font below. */
   .char-grid {
@@ -902,6 +1149,131 @@
     flex-direction: column;
     gap: 12px;
   }
+  /* The glyph list and QA report sit on white, whatever the theme. */
+  .glyphs-sheet {
+    --panel: #fff;
+    --line: #e2e2e2;
+    --muted: #666;
+    background: #fff;
+    color: #111;
+  }
+  /* QA statuses keep their colours in every theme. */
+  .qa-sheet {
+    --qa-pass: #0e8a7c;
+    --qa-warn: #b7791f;
+    --qa-fail: #b42318;
+  }
+  /* Each group is its own white card, whatever the theme; light-theme text
+     tokens keep headings readable on white in dark mode. */
+  .qa-group {
+    --panel: #fff;
+    --line: #e2e2e2;
+    --muted: #666;
+    --ink: #111;
+    --strong: #333;
+    --soft: #444;
+    background: #fff;
+    color: #111;
+  }
+  .qa-filter {
+    min-height: 36px;
+    padding: 2px 12px;
+    font-size: 13px;
+  }
+  .qa-filter-count {
+    opacity: 0.65;
+    font-variant-numeric: tabular-nums;
+  }
+  .qa-filter[aria-pressed='true'] {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+  /* Fixed columns so every group's table lines up. */
+  .qa-table {
+    table-layout: fixed;
+  }
+  .qa-table th {
+    width: auto;
+  }
+  .qa-table th:first-child {
+    width: 88px;
+  }
+  .qa-table th:nth-child(2) {
+    width: 40%;
+  }
+  .qa-table tr:last-child td {
+    border-bottom: none;
+  }
+  .qa-table .qa-pass {
+    --qa-tone: var(--qa-pass);
+  }
+  .qa-table .qa-warn {
+    --qa-tone: var(--qa-warn);
+    background: color-mix(in srgb, var(--qa-warn) 5%, transparent);
+  }
+  .qa-table .qa-fail {
+    --qa-tone: var(--qa-fail);
+    background: color-mix(in srgb, var(--qa-fail) 5%, transparent);
+  }
+  .qa-badge {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 52px;
+    padding: 3px 8px;
+    color: var(--qa-tone);
+    background: color-mix(in srgb, var(--qa-tone) 14%, transparent);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .qa-title {
+    color: inherit;
+  }
+  .qa-detail {
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  /* Diacritics cards are always white, whatever the theme. */
+  .diacritics-sheet {
+    --panel: #fff;
+    --line: #e2e2e2;
+  }
+  .diacritics-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  /* Each mark (فتحه, کسره, …) is its own white card, apart from the others. */
+  .diacritics-section {
+    padding: 14px;
+    background: #fff;
+    color: #111;
+    border: 1px solid var(--line);
+  }
+  .diacritics-section-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+  }
+  .diacritics-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .diacritics-block {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+  }
+  .diacritics-block-missing {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+  }
+  .diacritics-block-text {
+    margin: 8px 0 0;
+    line-height: 1.9;
+    direction: rtl;
+    overflow-wrap: anywhere;
+  }
   .language-sample-main {
     padding: 14px 14px 10px;
     direction: rtl;
@@ -919,6 +1291,12 @@
     font-size: 16px;
     color: var(--muted);
     border-top: 1px dashed var(--line);
+  }
+  .joining-cell {
+    min-height: 0;
+    /* 20% more than the shared .glyph-cell padding (12px 6px). */
+    padding: 14.4px 7.2px;
+    background: var(--panel);
   }
   .joining-forms {
     display: inline-flex;

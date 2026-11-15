@@ -3,13 +3,14 @@ import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
 import {
   characterSamples,
-  diacriticSamples,
+  diacriticGroups,
   insertKeyGroups,
   languageSamples,
   persianAlphabet,
+  zwnjArabicSamples,
   zwnjSamples,
 } from '../lib/samples';
-import { inspectFont } from '../lib/qa';
+import { QaReport, QaToolbar, type QaFilter } from './QaReport';
 import { WEIGHTS_TEXT_MAX, type TabSession, type WorkspaceAction } from '../state/workspace';
 import { Button, Icon, IconButton } from './ui';
 import { Glyphs, Metadata } from './FontInspection';
@@ -28,23 +29,127 @@ function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
     fontSynthesis: 'none',
   };
 }
-function downloadJson(name: string, data: unknown) {
-  const url = URL.createObjectURL(
-    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
-  );
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 /** Width that fits four joining forms of one letter at the tab's font size (pt → px). */
-function joiningCellWidth(tab: TabSession): number {
-  return Math.ceil(tab.controls.fontSize * (4 / 3) * 10 + 16);
+/**
+ * Joining forms of every letter in equal cells. The column width is measured from the
+ * widest row of forms, so cells grow with the font size and never clip their text.
+ */
+function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: string }) {
+  const grid = useRef<HTMLDivElement>(null);
+  const [cellWidth, setCellWidth] = useState(0);
+  useEffect(() => {
+    const element = grid.current;
+    if (!element) return;
+    const measure = () => {
+      const widest = Math.max(
+        0,
+        ...Array.from(element.querySelectorAll<HTMLElement>('.joining-forms'), (forms) =>
+          Math.ceil(forms.getBoundingClientRect().width),
+        ),
+      );
+      // Add the cell's own horizontal padding and border.
+      const cell = element.querySelector<HTMLElement>('.joining-cell');
+      const box = cell ? cell.offsetWidth - cell.clientWidth : 0;
+      const css = cell ? getComputedStyle(cell) : null;
+      const padding = css ? parseFloat(css.paddingLeft) + parseFloat(css.paddingRight) : 0;
+      setCellWidth(Math.ceil(widest + padding + box));
+    };
+    measure();
+    // Re-measure when the forms change size: font size, features or a late font load.
+    const observer = new ResizeObserver(measure);
+    element.querySelectorAll('.joining-forms').forEach((forms) => observer.observe(forms));
+    return () => observer.disconnect();
+  }, [style, letter]);
+  return (
+    <div
+      ref={grid}
+      className="glyph-grid"
+      style={
+        cellWidth
+          ? { gridTemplateColumns: `repeat(auto-fill, minmax(${cellWidth}px, 1fr))` }
+          : undefined
+      }
+    >
+      {persianAlphabet.map((char) => (
+        <div className="glyph-cell joining-cell" key={char}>
+          <span className="joining-forms" style={style}>
+            {[char, `${char}${letter}`, `${letter}${char}${letter}`, `${letter}${char}`].map(
+              (form) => (
+                <span key={form}>{form}</span>
+              ),
+            )}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** Fill share per layer: 50% for one or two fonts, otherwise split evenly. */
+/** True when the font has no glyph for some character of `text`; null if it can't tell. */
+function missingGlyph(font: LoadedFont, text: string): boolean | null {
+  if (!font.parsed) return null;
+  return Array.from(text).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0);
+}
+
+/** Diacritics test page: a grid per mark, stacked marks, then sample sentences. */
+function DiacriticsSheet({
+  font,
+  style,
+  lang,
+}: {
+  font: LoadedFont;
+  style: CSSProperties;
+  lang: 'fa' | 'ar';
+}) {
+  const group = diacriticGroups.find(({ id }) => id === lang)!;
+  return (
+    <div className="diacritics-sections" lang={lang}>
+      {!font.parsed && <p className="text-muted">{font.inspectionWarning}</p>}
+      {group.sections.map((section) => (
+        <section key={section.id} className="diacritics-section">
+          <h3 className="diacritics-section-title">{section.title}</h3>
+          {section.layout === 'grid' ? (
+            <div className="char-grid" style={{ fontSize: style.fontSize }}>
+              {section.items.map(({ text, label }) => {
+                const missing = missingGlyph(font, text);
+                return (
+                  <div
+                    className={`char-cell ${missing ? 'char-cell-missing' : ''}`}
+                    key={text}
+                    title={`${missing ? 'پشتیبانی نمی‌شود — ' : ''}${label} — ${codePoints(text)}`}
+                  >
+                    <span className="char-glyph" style={style}>
+                      {text}
+                    </span>
+                    {/* Same text in the UI font, to compare mark placement against. */}
+                    <span className="char-label">{text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="diacritics-blocks">
+              {section.items.map(({ text, label }) => (
+                <article
+                  key={text}
+                  className={`diacritics-block ${missingGlyph(font, text) ? 'diacritics-block-missing' : ''}`}
+                >
+                  <header className="char-label">{label}</header>
+                  <p className="diacritics-block-text" style={style}>
+                    {text}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function weightsLayerAlpha(count: number): number {
   return count <= 2 ? 0.5 : 1 / count;
 }
@@ -152,11 +257,14 @@ export function TestViews({
   tabId,
   tab,
   fonts,
+  allFonts,
   dispatch,
 }: {
   tabId: TabId;
   tab: TabSession;
   fonts: LoadedFont[];
+  /** Every loaded font, active or not; the QA report compares family siblings. */
+  allFonts: LoadedFont[];
   dispatch: Dispatch<WorkspaceAction>;
 }) {
   const [playing, setPlaying] = useState(false);
@@ -166,6 +274,8 @@ export function TestViews({
   const setSpeed = (value: number) =>
     dispatch({ type: 'set-typing', tab: tabId, patch: { speed: value } });
   const [letter, setLetter] = useState('ب');
+  const [diacriticLang, setDiacriticLang] = useState<'fa' | 'ar'>('fa');
+  const [qaFilter, setQaFilter] = useState<QaFilter>('all');
   const liveInput = useRef<HTMLTextAreaElement>(null);
   const [keyboard, setKeyboard] = useState<KeyboardId | null>(null);
   const keyboardLayout = keyboardLayouts.find(({ id }) => id === keyboard);
@@ -285,7 +395,7 @@ export function TestViews({
           </label>
           <div className="insert-keys mt-2">
             <Button disabled={disabled} onClick={() => insertText('\u200c')}>
-              درج نیم‌فاصله (U+200C)
+            نیم‌فاصله
             </Button>
             {insertKeyGroups.map((group) => (
               <div
@@ -336,34 +446,40 @@ export function TestViews({
         </div>
       )}
       {tabId === 'connections' && (
-        <div className="toolbar panel">
-          <label className="field">
-            حرف اتصال
-            <select value={letter} disabled={disabled} onChange={(e) => setLetter(e.target.value)}>
-              {persianAlphabet.map((char) => (
-                <option key={char}>{char}</option>
-              ))}
-            </select>
-          </label>
-          <p className="text-muted">حالت‌های جدا، ابتدایی، میانی و پایانی را مقایسه کنید.</p>
+        <div className="toolbar toolbar-joining panel">
+          <div className="joining-letters" role="group" aria-label="حرف اتصال">
+            {persianAlphabet.map((char) => (
+              <Button
+                key={char}
+                className="joining-letter"
+                aria-pressed={letter === char}
+                disabled={disabled}
+                onClick={() => setLetter(char)}
+              >
+                {char}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
-      {tabId === 'qa-report' && (
+      {tabId === 'qa-report' && fonts[0] && (
+        <QaToolbar font={fonts[0]} allFonts={allFonts} filter={qaFilter} onFilter={setQaFilter} />
+      )}
+      {tabId === 'diacritics' && (
         <div className="toolbar panel">
-          <Button
-            disabled={disabled}
-            onClick={() =>
-              downloadJson(
-                'font-desk-qa.json',
-                fonts.map((font) => ({ fileName: font.fileName, checks: inspectFont(font) })),
-              )
-            }
-          >
-            دریافت گزارش JSON
-          </Button>
-          <p className="text-muted">
-            بررسی ساختاری فونت؛ نتیجه شکل‌دهی را به‌صورت بصری هم بررسی کنید.
-          </p>
+          <div className="joining-letters" role="group" aria-label="زبان اعراب">
+            {diacriticGroups.map((group) => (
+              <Button
+                key={group.id}
+                className="joining-letter"
+                aria-pressed={diacriticLang === group.id}
+                disabled={disabled}
+                onClick={() => setDiacriticLang(group.id)}
+              >
+                {group.title}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
       {disabled && (
@@ -374,14 +490,15 @@ export function TestViews({
       {tabId === 'weights' && !disabled && (
         <WeightsOverlay tab={tab} fonts={fonts} dispatch={dispatch} />
       )}
-      {(tabId === 'weights' ? [] : fonts).map((font, index) => {
+      {tabId === 'metadata' && !disabled && <Metadata fonts={fonts} />}
+      {(tabId === 'weights' || tabId === 'metadata' ? [] : fonts).map((font, index) => {
         const style = previewStyle(font, tab);
         return (
           <section
             className={
               // A single-font tab shows its one font bare: no card, no name heading.
               isSingleFont(tabId)
-                ? 'preview-bare'
+                ? `preview-bare ${tabId === 'diacritics' ? 'diacritics-sheet' : ''} ${tabId === 'glyphs' ? 'glyphs-sheet' : ''} ${tabId === 'qa-report' ? 'qa-sheet' : ''}`
                 : `preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`
             }
             key={font.id}
@@ -460,33 +577,9 @@ export function TestViews({
                 {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
               </>
             )}
-            {tabId === 'connections' && (
-              <div
-                className="glyph-grid"
-                // Four joining forms per cell stay on one line, so cells widen with the font size.
-                style={{
-                  gridTemplateColumns: `repeat(auto-fill, minmax(${joiningCellWidth(tab)}px, 1fr))`,
-                }}
-              >
-                {persianAlphabet.map((char) => (
-                  <div className="glyph-cell" key={char}>
-                    <span className="joining-forms" style={style}>
-                      {[
-                        char,
-                        `${char}${letter}`,
-                        `${letter}${char}${letter}`,
-                        `${letter}${char}`,
-                      ].map((form) => (
-                        <span key={form}>{form}</span>
-                      ))}
-                    </span>
-                    <small>{char}</small>
-                  </div>
-                ))}
-              </div>
-            )}
+            {tabId === 'connections' && <ConnectionsGrid style={style} letter={letter} />}
             {tabId === 'zwnj' && (
-              <table className="data-table">
+              <table className="data-table zwnj-table">
                 <thead>
                   <tr>
                     {['نیم‌فاصله U+200C', 'بدون فاصله', 'فاصله معمولی'].map((label) => (
@@ -495,8 +588,11 @@ export function TestViews({
                   </tr>
                 </thead>
                 <tbody>
-                  {zwnjSamples.map((row, i) => (
-                    <tr key={i}>
+                  {[
+                    ...zwnjSamples.map((row) => ({ row, lang: 'fa' })),
+                    ...zwnjArabicSamples.map((row) => ({ row, lang: 'ar' })),
+                  ].map(({ row, lang }, i) => (
+                    <tr key={i} lang={lang}>
                       {row.map((text, j) => (
                         <td key={j} style={style}>
                           {text}
@@ -507,45 +603,12 @@ export function TestViews({
                 </tbody>
               </table>
             )}
-            {tabId === 'diacritics' &&
-              diacriticSamples.map((text) => (
-                <p className="preview-text border-b border-line" key={text} style={style}>
-                  {text}
-                </p>
-              ))}
-            {tabId === 'glyphs' && <Glyphs font={font} size={tab.controls.fontSize} />}
-            {tabId === 'metadata' && <Metadata font={font} />}
+            {tabId === 'diacritics' && (
+              <DiacriticsSheet font={font} style={style} lang={diacriticLang} />
+            )}
+            {tabId === 'glyphs' && <Glyphs font={font} />}
             {tabId === 'qa-report' && (
-              <table className="data-table">
-                <tbody>
-                  {inspectFont(font)
-                    .filter((result) => !tab.controls.onlyIssues || result.status !== 'pass')
-                    .map((result) => (
-                      <tr key={result.title}>
-                        <th>{result.title}</th>
-                        <td
-                          className={
-                            result.status === 'fail'
-                              ? 'text-[var(--danger)]'
-                              : result.status === 'pass'
-                                ? 'text-accent'
-                                : 'text-muted'
-                          }
-                        >
-                          {
-                            {
-                              pass: '✓ موجود',
-                              warning: 'نیازمند بررسی',
-                              fail: '✕ ناموجود',
-                              unavailable: 'نامشخص',
-                            }[result.status]
-                          }
-                        </td>
-                        <td>{result.detail}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <QaReport font={font} allFonts={allFonts} filter={qaFilter} />
             )}
           </section>
         );

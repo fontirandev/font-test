@@ -264,6 +264,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
                 tabId={tabId}
                 tab={tab}
                 fonts={activeFonts}
+                allFonts={fonts}
                 dispatch={dispatch}
               />
             )}

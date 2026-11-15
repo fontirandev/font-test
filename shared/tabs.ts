@@ -7,7 +7,7 @@ export const tabDefinitions = [
   },
   {
     id: 'live-typing',
-    title: 'تست تایپ',
+    title: 'تایپ',
     controls: ['fontSize', 'direction', 'alignment', 'features', 'axes'],
   },
   {
@@ -22,21 +22,32 @@ export const tabDefinitions = [
     singleFont: true,
   },
   {
+    id: 'diacritics',
+    title: 'اعراب',
+    controls: ['fontSize', 'features', 'axes'],
+    singleFont: true,
+  },
+  {
     id: 'characters',
     title: 'کاراکترها',
     controls: ['fontSize', 'showMissing', 'features', 'axes'],
     singleFont: true,
   },
-  { id: 'connections', title: 'اتصالات', controls: ['fontSize', 'features', 'axes'] },
-  { id: 'zwnj', title: 'نیم‌فاصله', controls: ['fontSize', 'features', 'axes'] },
   {
-    id: 'diacritics',
-    title: 'اعراب و علائم',
+    id: 'connections',
+    title: 'اتصالات',
     controls: ['fontSize', 'features', 'axes'],
+    singleFont: true,
   },
-  { id: 'glyphs', title: 'لیست گلیف‌ها', controls: ['fontSize'] },
+  {
+    id: 'zwnj',
+    title: 'نیم‌فاصله',
+    controls: ['fontSize', 'features', 'axes'],
+    singleFont: true,
+  },
+  { id: 'glyphs', title: 'لیست گلیف‌ها', controls: [], singleFont: true },
   { id: 'metadata', title: 'متادیتا', controls: [] },
-  { id: 'qa-report', title: 'گزارش QA', controls: ['onlyIssues'] },
+  { id: 'qa-report', title: 'گزارش QA', controls: [], singleFont: true },
 ] as const;
 
 export type TabId = (typeof tabDefinitions)[number]['id'];

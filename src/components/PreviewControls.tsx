@@ -137,16 +137,6 @@ export function PreviewControls({
           />
         </div>
       )}
-      {permitted('onlyIssues') && (
-        <div className="control-section">
-          <Toggle
-            label="Only warnings and failures"
-            checked={c.onlyIssues}
-            disabled={disabled}
-            onChange={(onlyIssues) => onChange({ onlyIssues })}
-          />
-        </div>
-      )}
     </div>
   );
 }

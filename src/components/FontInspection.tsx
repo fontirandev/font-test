@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { LoadedFont } from '../lib/fonts';
-import { Button, Modal } from './ui';
+import { GlyphDetail } from './GlyphDetail';
 
-export function Glyphs({ font, size }: { font: LoadedFont; size: number }) {
-  const [page, setPage] = useState(0);
+/** Drawing height of each glyph, in px; the same for every glyph and every font. */
+const glyphHeight = 48;
+
+export function Glyphs({ font }: { font: LoadedFont }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const parsed = font.parsed;
@@ -27,9 +29,11 @@ export function Glyphs({ font, size }: { font: LoadedFont; size: number }) {
     return list;
   }, [parsed, search]);
   if (!parsed) return <p className="p-5 text-muted">{font.inspectionWarning}</p>;
-  const pages = Math.max(1, Math.ceil(matches.length / 100));
-  const safePage = Math.min(page, pages - 1);
-  const glyph = selected === null ? null : parsed.glyphs.get(selected);
+  // One frame for every glyph (ascender to descender, square) so all share a scale.
+  const ascender = parsed.ascender || parsed.unitsPerEm * 0.8;
+  const descender = parsed.descender || -parsed.unitsPerEm * 0.2;
+  const pad = (ascender - descender) * 0.1;
+  const frame = ascender - descender + pad * 2;
   return (
     <div>
       <div className="flex items-center gap-3 border-b border-line p-3">
@@ -40,26 +44,16 @@ export function Glyphs({ font, size }: { font: LoadedFont; size: number }) {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setPage(0);
           }}
         />
-        <Button disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>
-          قبلی
-        </Button>
-        <span>
-          {safePage + 1} / {pages}
-        </span>
-        <Button disabled={safePage >= pages - 1} onClick={() => setPage(safePage + 1)}>
-          بعدی
-        </Button>
         <span className="text-muted">{matches.length} گلیف</span>
       </div>
       <div className="glyph-grid" dir="ltr">
-        {matches.slice(safePage * 100, (safePage + 1) * 100).map((index) => {
+        {matches.map((index) => {
           const g = parsed.glyphs.get(index);
           const box = g.getBoundingBox();
-          const width = Math.max(1, box.x2 - box.x1);
-          const height = Math.max(1, box.y2 - box.y1);
+          // Centre each glyph horizontally; the vertical frame is shared.
+          const centre = box.x2 > box.x1 ? (box.x1 + box.x2) / 2 : (g.advanceWidth ?? 0) / 2;
           return (
             <button
               key={index}
@@ -69,8 +63,8 @@ export function Glyphs({ font, size }: { font: LoadedFont; size: number }) {
             >
               <svg
                 width="100%"
-                height={Math.min(200, Math.max(40, size * 1.33))}
-                viewBox={`${box.x1 - 50} ${-box.y2 - 50} ${width + 100} ${height + 100}`}
+                height={glyphHeight}
+                viewBox={`${centre - frame / 2} ${-ascender - pad} ${frame} ${frame}`}
                 aria-hidden="true"
               >
                 <path d={g.getPath(0, 0, parsed.unitsPerEm).toPathData(2)} fill="currentColor" />
@@ -82,66 +76,83 @@ export function Glyphs({ font, size }: { font: LoadedFont; size: number }) {
         })}
       </div>
       {matches.length === 0 && <p className="p-5 text-muted">گلیفی پیدا نشد.</p>}
-      {glyph && (
-        <Modal title={`گلیف ${selected}: ${glyph.name ?? ''}`} onClose={() => setSelected(null)}>
-          <dl className="grid grid-cols-2 gap-3" dir="ltr">
-            <dt>Glyph ID</dt>
-            <dd>{selected}</dd>
-            <dt>Unicode</dt>
-            <dd>
-              {glyph.unicodes.map((code) => `U+${code.toString(16).toUpperCase()}`).join(', ') ||
-                'Unencoded'}
-            </dd>
-            <dt>Advance width</dt>
-            <dd>{glyph.advanceWidth}</dd>
-            <dt>Left side bearing</dt>
-            <dd>{glyph.leftSideBearing}</dd>
-          </dl>
-          <p className="mt-4 text-muted">نمایش مسیر اصلی گلیف، بدون جایگزینی مرورگر.</p>
-        </Modal>
+      {selected !== null && (
+        <GlyphDetail
+          font={parsed}
+          index={selected}
+          order={matches}
+          onSelect={setSelected}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
 }
 
-export function Metadata({ font }: { font: LoadedFont }) {
-  if (!font.parsed) return <p className="p-5 text-muted">{font.inspectionWarning}</p>;
+function metadataRows(font: LoadedFont): Map<string, string> {
+  const rows = new Map<string, string>();
+  rows.set('Bytes', String(font.size));
+  rows.set('Weight', String(font.weight));
+  rows.set('OpenType features', font.features.join(', ') || '—');
+  if (font.axes.length)
+    rows.set(
+      'Variable axes',
+      font.axes
+        .map((a) => `${a.tag} (${a.name}) ${a.min}–${a.max}, default ${a.defaultValue}`)
+        .join(' · '),
+    );
   const parsed = font.parsed;
-  const rows: [string, string][] = [
-    ['File', font.fileName],
-    ['Bytes', String(font.size)],
-    ['Glyphs', String(parsed.glyphs.length)],
-    ['Units per em', String(parsed.unitsPerEm)],
-    ['Ascender', String(parsed.ascender)],
-    ['Descender', String(parsed.descender)],
-    ['Weight', String(font.weight)],
-    ['OpenType features', font.features.join(', ') || '—'],
-    ...(font.axes.length
-      ? [
-          [
-            'Variable axes',
-            font.axes
-              .map((a) => `${a.tag} (${a.name}) ${a.min}–${a.max}, default ${a.defaultValue}`)
-              .join(' · '),
-          ] as [string, string],
-        ]
-      : []),
-    ...Object.entries(parsed.names).map(([name, value]): [string, string] => [
+  if (!parsed) return rows;
+  rows.set('Glyphs', String(parsed.glyphs.length));
+  rows.set('Units per em', String(parsed.unitsPerEm));
+  rows.set('Ascender', String(parsed.ascender));
+  rows.set('Descender', String(parsed.descender));
+  for (const [name, value] of Object.entries(parsed.names))
+    rows.set(
       // IDs 256+ are font-specific strings, such as stylistic set names.
       /^\d+$/.test(name) ? `Name ID ${name}` : name,
       value.fa ?? value.en ?? Object.values(value).join(' / '),
-    ]),
-  ];
+    );
+  return rows;
+}
+
+/** One table for all fonts: a column per font, a row per metadata field. */
+export function Metadata({ fonts }: { fonts: LoadedFont[] }) {
+  const perFont = fonts.map(metadataRows);
+  // Union of field names, in first-seen order across fonts.
+  const names = [...new Set(perFont.flatMap((rows) => [...rows.keys()]))];
   return (
-    <table className="data-table" dir="ltr">
-      <tbody>
-        {rows.map(([name, value]) => (
-          <tr key={name}>
-            <th scope="row">{name}</th>
-            <td>{value}</td>
+    <div className="panel metadata-table-wrap" dir="ltr">
+      <table className="data-table metadata-table">
+        <thead>
+          <tr>
+            <th scope="col" />
+            {fonts.map((font) => (
+              <th scope="col" key={font.id} title={font.name}>
+                {font.fileName}
+              </th>
+            ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {names.map((name) => (
+            <tr key={name}>
+              <th scope="row">{name}</th>
+              {fonts.map((font, i) => (
+                <td key={font.id}>{perFont[i]?.get(name) ?? '—'}</td>
+              ))}
+            </tr>
+          ))}
+          {fonts.some((font) => !font.parsed) && (
+            <tr>
+              <th scope="row">Warning</th>
+              {fonts.map((font) => (
+                <td key={font.id}>{font.parsed ? '' : font.inspectionWarning}</td>
+              ))}
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }

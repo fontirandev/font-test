@@ -9,7 +9,6 @@ export const controlsSchema = z.strictObject({
   features: z.record(tag, z.boolean()).default({}),
   axes: z.record(tag, z.number().finite()).default({}),
   showMissing: z.boolean().default(true),
-  onlyIssues: z.boolean().default(false),
 });
 export type PreviewSettings = z.infer<typeof controlsSchema>;
 export const sortSchema = z.enum(['manual', 'name-asc', 'name-desc', 'weight-asc', 'weight-desc']);
@@ -37,20 +36,15 @@ export function createFactoryDefaults(): AppDefaults {
     theme: 'light',
     sort: 'manual',
     tabs: Object.fromEntries(
-      tabIds.map((id) => [
-        id,
-        tabDefaultsSchema.parse(
-          // Weight overlays need large glyphs to show stroke differences (150pt ≈ 200px).
-          id === 'weights' ? { controls: controlsSchema.parse({ fontSize: 150 }) } : {},
-        ),
-      ]),
+      // Font size is shared by every tab, so no tab gets its own size.
+      tabIds.map((id) => [id, tabDefaultsSchema.parse({})]),
     ) as AppDefaults['tabs'],
   };
 }
 
 /** Do not persist controls that have no effect on a tab. */
 /** Controls that were removed; stripped from stored payloads so old data still parses. */
-const retiredControls = ['lineHeight', 'letterSpacing'];
+const retiredControls = ['lineHeight', 'letterSpacing', 'onlyIssues'];
 
 /**
  * Upgrade payloads saved by older versions: drop retired controls, and lift the

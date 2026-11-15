@@ -4,6 +4,7 @@ import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
 import {
   characterGroups,
   diacriticSamples,
+  insertKeyGroups,
   languageSamples,
   persianAlphabet,
   zwnjSamples,
@@ -12,6 +13,8 @@ import { inspectFont } from '../lib/qa';
 import { WEIGHTS_TEXT_MAX, type TabSession, type WorkspaceAction } from '../state/workspace';
 import { Button, Icon, IconButton } from './ui';
 import { Glyphs, Metadata } from './FontInspection';
+import { OnScreenKeyboard } from './OnScreenKeyboard';
+import { keyboardLayouts, type KeyboardId } from '../lib/keyboards';
 
 function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
   return {
@@ -163,6 +166,30 @@ export function TestViews({
   const setSpeed = (value: number) =>
     dispatch({ type: 'set-typing', tab: tabId, patch: { speed: value } });
   const [letter, setLetter] = useState('ب');
+  const liveInput = useRef<HTMLTextAreaElement>(null);
+  const [keyboard, setKeyboard] = useState<KeyboardId | null>(null);
+  const keyboardLayout = keyboardLayouts.find(({ id }) => id === keyboard);
+  // Insert at the caret (replacing any selection) and keep typing from there.
+  // With `backspace`, an empty selection first grows to the code point before the caret.
+  const insertText = (insert: string, backspace = false) => {
+    const el = liveInput.current;
+    let start = el?.selectionStart ?? tab.text.length;
+    const end = el?.selectionEnd ?? tab.text.length;
+    if (backspace && start === end && start > 0) {
+      const low = tab.text.charCodeAt(start - 1);
+      start -= low >= 0xdc00 && low <= 0xdfff && start > 1 ? 2 : 1;
+    }
+    dispatch({
+      type: 'set-text',
+      tab: tabId,
+      text: tab.text.slice(0, start) + insert + tab.text.slice(end),
+    });
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(start + insert.length, start + insert.length);
+    });
+  };
   const [group, setGroup] = useState<keyof typeof characterGroups>('فارسی');
   const segments = useMemo(
     () =>
@@ -247,23 +274,67 @@ export function TestViews({
         </div>
       )}
       {tabId === 'live-typing' && (
-        <div className="panel mb-4 p-4">
+        <div className="panel mb-1 p-2">
           <label className="field">
             متن آزمایش
             <textarea
-              className="text-input min-h-24"
+              ref={liveInput}
+              className="text-input min-h-16"
               value={tab.text}
               disabled={disabled}
               onChange={(e) => dispatch({ type: 'set-text', tab: tabId, text: e.target.value })}
             />
           </label>
-          <Button
-            className="mt-2"
-            disabled={disabled}
-            onClick={() => dispatch({ type: 'set-text', tab: tabId, text: tab.text + '\u200c' })}
-          >
-            درج نیم‌فاصله (U+200C)
-          </Button>
+          <div className="insert-keys mt-2">
+            <Button disabled={disabled} onClick={() => insertText('\u200c')}>
+              درج نیم‌فاصله (U+200C)
+            </Button>
+            {insertKeyGroups.map((group) => (
+              <div
+                key={group.name}
+                className="insert-key-group"
+                role="group"
+                aria-label={group.name}
+              >
+                {group.keys.map(({ char, label, title }) => (
+                  <Button
+                    key={char}
+                    className="insert-key"
+                    disabled={disabled}
+                    title={`${title ?? group.name} (U+${char.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')})`}
+                    // Keep the caret in the textarea while clicking.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertText(char)}
+                  >
+                    {label ?? char}
+                  </Button>
+                ))}
+              </div>
+            ))}
+            <div className="insert-key-group" role="group" aria-label="صفحه‌کلید">
+              {keyboardLayouts.map(({ id, name }) => (
+                <Button
+                  key={id}
+                  className="keyboard-toggle"
+                  aria-pressed={keyboard === id}
+                  disabled={disabled}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setKeyboard(keyboard === id ? null : id)}
+                >
+                  ⌨ {name}
+                </Button>
+              ))}
+            </div>
+          </div>
+          {keyboardLayout && (
+            <OnScreenKeyboard
+              key={keyboardLayout.id}
+              layout={keyboardLayout}
+              disabled={disabled}
+              onInsert={(text) => insertText(text)}
+              onBackspace={() => insertText('', true)}
+            />
+          )}
         </div>
       )}
       {isCharacters && (
@@ -334,18 +405,21 @@ export function TestViews({
       {tabId === 'weights' && !disabled && (
         <WeightsOverlay tab={tab} fonts={fonts} dispatch={dispatch} />
       )}
-      {(tabId === 'weights' ? [] : fonts).map((font) => {
+      {(tabId === 'weights' ? [] : fonts).map((font, index) => {
         const style = previewStyle(font, tab);
         return (
           <section
-            className={`preview-card panel ${tabId === 'typing-test' ? 'preview-card-compact' : ''}`}
+            className={`preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`}
             key={font.id}
           >
             <h2 className="preview-heading" title={font.name}>
-              {font.fileName}
+              <span className="preview-heading-name">{font.fileName}</span>
+              {tabId === 'live-typing' && (
+                <span className="preview-heading-count">{index + 1}</span>
+              )}
             </h2>
-            {(tabId === 'typing-test' || tabId === 'live-typing') && (
-              tabId === 'typing-test' ? (
+            {(tabId === 'typing-test' || tabId === 'live-typing') &&
+              (tabId === 'typing-test' ? (
                 <div
                   className="preview-text preview-text-line"
                   style={style}
@@ -359,11 +433,10 @@ export function TestViews({
                   {segments.slice(0, position).join('')}
                 </div>
               ) : (
-                <div className="preview-text min-h-[132px]" style={style}>
+                <div className="preview-text preview-text-compact" style={style}>
                   {tab.text}
                 </div>
-              )
-            )}
+              ))}
             {tabId === 'languages' &&
               languageSamples.map((sample) => (
                 <div key={sample.lang} className="border-b border-line p-4">

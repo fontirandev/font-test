@@ -51,3 +51,38 @@ export const diacriticSamples = [
   'آ أ إ ؤ ئ ۀ ة',
   '«نقل‌قول» (پرانتز) [کروشه] — … ! ؟ ، ؛',
 ];
+
+/** On-screen keys for the live typing tab; `label` is what the key shows when it differs. */
+export const insertKeyGroups: {
+  name: string;
+  keys: { char: string; label?: string; title?: string }[];
+}[] = [
+  {
+    name: 'اعداد فارسی',
+    keys: Array.from({ length: 10 }, (_, i) => ({ char: String.fromCodePoint(0x06f0 + i) })),
+  },
+  {
+    name: 'اعداد عربی',
+    keys: Array.from({ length: 10 }, (_, i) => ({ char: String.fromCodePoint(0x0660 + i) })),
+  },
+  {
+    name: 'اعراب',
+    // Combining marks are shown on a dotted circle so the key isn't blank.
+    keys: (
+      [
+        ['َ', 'فتحه'],
+        ['ِ', 'کسره'],
+        ['ُ', 'ضمه'],
+        ['ً', 'تنوین نصب'],
+        ['ٍ', 'تنوین جر'],
+        ['ٌ', 'تنوین رفع'],
+        ['ْ', 'سکون'],
+        ['ّ', 'تشدید'],
+        ['ٰ', 'الف خنجری'],
+        ['ٓ', 'مد'],
+        ['ٔ', 'همزه بالا'],
+        ['ٕ', 'همزه پایین'],
+      ] as [string, string][]
+    ).map(([char, title]) => ({ char, title, label: '◌' + char })),
+  },
+];

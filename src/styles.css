@@ -699,8 +699,9 @@
     margin-bottom: 16px;
   }
   .preview-heading {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     white-space: nowrap;
     height: 24px;
     line-height: 23px;
@@ -709,6 +710,17 @@
     color: var(--strong);
     font-size: 10px;
     font-weight: 300;
+  }
+  .preview-heading-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Sits at the inline end, i.e. the left edge in RTL. */
+  .preview-heading-count {
+    margin-inline-start: auto;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
   .preview-text {
     padding: 20px 24px;
@@ -735,6 +747,64 @@
   .preview-card-compact {
     min-height: 0;
     margin-bottom: 4px;
+  }
+  /* Multi-line live text: keep only a thin gutter around it. */
+  .preview-text-compact {
+    padding: 8px 12px;
+  }
+  /* On-screen keys beside the ZWNJ button in the live typing tab. */
+  .insert-keys {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+  }
+  .insert-key-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .insert-key {
+    min-width: 28px;
+    padding: 2px 4px;
+    font-size: 14px;
+  }
+  /* On-screen keyboard (Arabic / Persian / Kurdish) under the live typing input. */
+  .osk {
+    /* Physical key order: Q/ض sits on the left even though the page is RTL. */
+    direction: ltr;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 8px;
+    max-width: 640px;
+  }
+  .osk-row {
+    display: flex;
+    gap: 2px;
+  }
+  .osk-key {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 32px;
+    padding: 2px;
+    font-size: 15px;
+  }
+  .osk-key-empty {
+    background: transparent;
+  }
+  .osk-key-wide {
+    flex-grow: 1.6;
+    font-size: 12px;
+  }
+  .osk-key-space {
+    flex-grow: 8;
+    font-size: 12px;
+  }
+  .osk-key[aria-pressed='true'],
+  .keyboard-toggle[aria-pressed='true'] {
+    background: var(--primary);
+    color: var(--on-primary);
   }
   .toolbar:has(+ .preview-card-compact) {
     margin-bottom: 4px;

@@ -23,6 +23,8 @@ export interface LoadedFont extends FontIdentity {
   face: FontFace;
   parsed: Font | null;
   features: string[];
+  /** Designer-given names for stylistic sets (ssXX), from GSUB FeatureParams + name table. */
+  featureNames: Record<string, string>;
   axes: VariationAxis[];
   inspectionWarning: string | null;
 }
@@ -34,6 +36,70 @@ export function readFeatures(font: Font): string[] {
   return [
     ...new Set(tables.flatMap((table) => table?.features?.map((feature) => feature.tag) ?? [])),
   ].sort();
+}
+
+/** Table bytes by tag, from a raw TTF/OTF or a WOFF (zlib-compressed tables). */
+async function readTable(bytes: ArrayBuffer, tag: string): Promise<DataView | null> {
+  const view = new DataView(bytes);
+  const tagAt = (offset: number) =>
+    String.fromCharCode(...new Uint8Array(bytes, offset, 4));
+  if (tagAt(0) === 'wOFF') {
+    const count = view.getUint16(12);
+    for (let i = 0; i < count; i++) {
+      const record = 44 + i * 20;
+      if (tagAt(record) !== tag) continue;
+      const offset = view.getUint32(record + 4);
+      const compLength = view.getUint32(record + 8);
+      const origLength = view.getUint32(record + 12);
+      const data = bytes.slice(offset, offset + compLength);
+      if (compLength >= origLength) return new DataView(data);
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate'));
+      return new DataView(await new Response(stream).arrayBuffer());
+    }
+    return null;
+  }
+  const count = view.getUint16(4);
+  for (let i = 0; i < count; i++) {
+    const record = 12 + i * 16;
+    if (tagAt(record) !== tag) continue;
+    const offset = view.getUint32(record + 8);
+    return new DataView(bytes, offset, view.getUint32(record + 12));
+  }
+  return null;
+}
+
+/**
+ * Stylistic set names: each ssXX feature may point (FeatureParams) at a name ID
+ * whose string the designer wrote, e.g. "Farsi Numeral" for ss01.
+ */
+export async function readFeatureNames(
+  sfnt: ArrayBuffer,
+  font: Font,
+): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+  const gsub = await readTable(sfnt, 'GSUB');
+  if (!gsub) return result;
+  const names = font.names as unknown as Record<string, Record<string, string> | undefined>;
+  const featureList = gsub.getUint16(6);
+  const count = gsub.getUint16(featureList);
+  for (let i = 0; i < count; i++) {
+    const record = featureList + 2 + i * 6;
+    const tag = String.fromCharCode(
+      gsub.getUint8(record),
+      gsub.getUint8(record + 1),
+      gsub.getUint8(record + 2),
+      gsub.getUint8(record + 3),
+    );
+    if (!/^ss\d\d$/.test(tag) || tag in result) continue;
+    const feature = featureList + gsub.getUint16(record + 4);
+    const params = gsub.getUint16(feature);
+    if (!params) continue;
+    const nameId = gsub.getUint16(feature + params + 2);
+    const value = names[String(nameId)];
+    const name = value && (value.en ?? value.fa ?? Object.values(value)[0]);
+    if (name) result[tag] = name;
+  }
+  return result;
 }
 
 export function readAxes(font: Font): VariationAxis[] {
@@ -87,8 +153,11 @@ export async function loadFont(file: File, id = createId()): Promise<LoadedFont>
   if (file.size > 50 * 1024 * 1024) throw new Error('حجم فایل باید کمتر از ۵۰ مگابایت باشد.');
   const bytes = await file.arrayBuffer();
   let parsed: Font | null = null;
+  let featureNames: Record<string, string> = {};
   try {
-    parsed = opentype.parse(await toSfnt(bytes));
+    const sfnt = await toSfnt(bytes);
+    parsed = opentype.parse(sfnt);
+    featureNames = await readFeatureNames(sfnt, parsed).catch(() => ({}));
   } catch {
     /* Browser rendering may support formats the inspector does not. */
   }
@@ -126,6 +195,7 @@ export async function loadFont(file: File, id = createId()): Promise<LoadedFont>
     name:
       parsed?.names.fullName?.fa ?? parsed?.names.fullName?.en ?? file.name.replace(/\.[^.]+$/, ''),
     features: parsed ? readFeatures(parsed) : [],
+    featureNames,
     inspectionWarning: parsed
       ? null
       : 'نمایش فونت ممکن است، اما تحلیل این فایل پشتیبانی نمی‌شود. برای بررسی گلیف و متادیتا نسخه TTF یا OTF را باز کنید.',

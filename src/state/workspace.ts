@@ -56,15 +56,22 @@ function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings
   );
 }
 
-/** Apply shared control values to every tab that supports them. */
+/**
+ * The text tabs are one workspace for testing a sample: every control changed in
+ * one of them (letterforms, direction, alignment…) carries over to the others.
+ */
+export const linkedTabs: readonly TabId[] = ['typing-test', 'live-typing', 'weights'];
+
+/** Apply control values to the given tabs (every tab by default) that support them. */
 function applyShared(
   tabs: Workspace['tabs'],
-  values: Partial<Pick<PreviewSettings, SharedControl>>,
+  values: Partial<PreviewSettings>,
+  targets: readonly TabId[] = tabIds,
 ): Workspace['tabs'] {
   const next = { ...tabs };
-  for (const id of tabIds) {
+  for (const id of targets) {
     const patch = Object.fromEntries(
-      Object.entries(values).filter(([key]) => supportsControl(id, key as SharedControl)),
+      Object.entries(values).filter(([key]) => supportsControl(id, key as keyof PreviewSettings)),
     );
     if (Object.keys(patch).length)
       next[id] = { ...next[id], controls: { ...next[id].controls, ...patch } };
@@ -178,10 +185,9 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         ),
       );
       next = { ...tab, controls: { ...tab.controls, ...patch } };
-      return {
-        ...state,
-        tabs: applyShared({ ...state.tabs, [action.tab]: next }, pickShared(patch)),
-      };
+      let tabs = applyShared({ ...state.tabs, [action.tab]: next }, pickShared(patch));
+      if (linkedTabs.includes(action.tab)) tabs = applyShared(tabs, patch, linkedTabs);
+      return { ...state, tabs };
     }
     case 'set-text':
       next = { ...tab, text: action.text, typing: { ...tab.typing, position: 0 } };
@@ -196,10 +202,12 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         controls: defaults.controls,
         text: defaultText(action.tab, action.defaults),
       };
-      return {
-        ...state,
-        tabs: applyShared({ ...state.tabs, [action.tab]: next }, sharedDefaults(action.defaults)),
-      };
+      let tabs = applyShared({ ...state.tabs, [action.tab]: next }, sharedDefaults(action.defaults));
+      if (linkedTabs.includes(action.tab)) {
+        const { fontSize: _size, display: _display, axes: _axes, ...own } = defaults.controls;
+        tabs = applyShared(tabs, own, linkedTabs);
+      }
+      return { ...state, tabs };
     }
   }
   return { ...state, tabs: { ...state.tabs, [action.tab]: next } };

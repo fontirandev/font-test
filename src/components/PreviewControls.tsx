@@ -46,7 +46,8 @@ export function isToggleableFeature(tag: string): boolean {
   return tag in featureLabels || isStylisticSet(tag) || isCharacterVariant(tag);
 }
 
-export function featureLabel(tag: string): string {
+export function featureLabel(tag: string, names: Record<string, string> = {}): string {
+  if (names[tag]) return names[tag];
   if (isStylisticSet(tag)) return `Stylistic set ${Number(tag.slice(2))}`;
   if (isCharacterVariant(tag)) return `Character variant ${Number(tag.slice(2))}`;
   return featureLabels[tag] ?? tag;
@@ -69,6 +70,7 @@ export function PreviewControls({
   const features = [...new Set(active.flatMap((font) => font.features))].filter(
     isToggleableFeature,
   );
+  const featureNames = Object.assign({}, ...active.map((font) => font.featureNames ?? {}));
   const axes = active.flatMap((font) =>
     font.axes.map((axis) => ({ ...axis, fontName: font.name })),
   );
@@ -135,7 +137,7 @@ export function PreviewControls({
                 {tags.map((tag) => (
                   <Toggle
                     key={tag}
-                    label={featureLabel(tag)}
+                    label={featureLabel(tag, featureNames)}
                     checked={c.features[tag] ?? onByDefault.has(tag)}
                     disabled={disabled}
                     onChange={(value) => onChange({ features: { ...c.features, [tag]: value } })}

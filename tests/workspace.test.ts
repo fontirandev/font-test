@@ -17,7 +17,7 @@ function setup() {
 }
 test('font activation, controls and text are isolated per tab', () => {
   const initial = setup();
-  const untouched = structuredClone(initial.tabs['live-typing']);
+  const untouched = structuredClone(initial.tabs['languages']);
   let state = workspaceReducer(initial, { type: 'toggle-font', tab: 'typing-test', id: 'a' });
   state = workspaceReducer(state, { type: 'move-font', id: 'b', before: 'a' });
   state = workspaceReducer(state, {
@@ -26,10 +26,36 @@ test('font activation, controls and text are isolated per tab', () => {
     patch: { direction: 'ltr' },
   });
   state = workspaceReducer(state, { type: 'set-text', tab: 'typing-test', text: 'آزمایش' });
-  assert.deepEqual(state.tabs['live-typing'], untouched);
+  assert.deepEqual(state.tabs['languages'], untouched);
   assert.equal(state.tabs['typing-test'].active.a, false);
+  assert.equal(state.tabs['live-typing'].active.a, true);
+  assert.notEqual(state.tabs['live-typing'].text, 'آزمایش');
   assert.deepEqual(state.order, ['b', 'a']);
   assert.equal(initial.tabs['typing-test'].active.a, true);
+});
+test('the three text tabs keep every control in step', () => {
+  let state = workspaceReducer(setup(), {
+    type: 'set-controls',
+    tab: 'live-typing',
+    patch: { features: { kern: false, ss01: true }, direction: 'ltr', alignment: 'center' },
+  });
+  for (const id of ['typing-test', 'live-typing'] as const) {
+    assert.deepEqual(state.tabs[id].controls.features, { kern: false, ss01: true });
+    assert.equal(state.tabs[id].controls.direction, 'ltr');
+    assert.equal(state.tabs[id].controls.alignment, 'center');
+  }
+  // Weights has no alignment control, so only what it offers carries over.
+  assert.deepEqual(state.tabs.weights.controls.features, { kern: false, ss01: true });
+  assert.equal(state.tabs.weights.controls.direction, 'ltr');
+  assert.equal(state.tabs.weights.controls.alignment, 'start');
+  assert.deepEqual(state.tabs.languages.controls.features, {});
+  state = workspaceReducer(state, {
+    type: 'reset-tab',
+    tab: 'weights',
+    defaults: createFactoryDefaults(),
+  });
+  assert.deepEqual(state.tabs['typing-test'].controls.features, {});
+  assert.equal(state.tabs['live-typing'].controls.direction, 'rtl');
 });
 test('font size and variable axes are shared by every tab that offers them', () => {
   let state = workspaceReducer(setup(), {

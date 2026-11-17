@@ -325,8 +325,8 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           defaults={{ ...defaults, theme }}
           onClose={() => setModal(null)}
           onSaved={(value) => {
-            // Saving a default also updates the three editable preview samples immediately.
-            for (const id of ['typing-test', 'live-typing', 'weights'] as const) {
+            // Saving a default also updates the editable preview samples immediately.
+            for (const id of ['typing-test', 'live-typing', 'paragraph', 'weights'] as const) {
               dispatch({ type: 'set-text', tab: id, text: defaultText(id, value) });
             }
             setDefaults(value);
@@ -346,7 +346,8 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           </p>
           <p className="about-privacy mt-4 leading-8">
             <strong>حریم خصوصی شما محفوظ است.</strong> همه‌چیز در مرورگر خودتان اجرا می‌شود و
-            فونت‌هایی که باز می‌کنید هرگز به هیچ سروری ارسال نمی‌شوند.</p>
+            فونت‌هایی که باز می‌کنید هرگز به هیچ سروری ارسال نمی‌شوند.
+          </p>
           <p className="mt-3 leading-8 text-muted">
             اگر ایده یا پیشنهادی برای بهتر شدنش دارید، خوشحال می‌شویم در تلگرام با ما در میان
             بگذارید.

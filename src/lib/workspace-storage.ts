@@ -1,10 +1,6 @@
 import { controlsSchema, type AppDefaults, type PreviewSettings } from '../../shared/settings';
-import { supportsControl, tabIds, type TabId } from '../../shared/tabs';
-import {
-  createWorkspace,
-  type TabSession,
-  type Workspace,
-} from '../state/workspace';
+import { isSingleFont, supportsControl, tabIds, type TabId } from '../../shared/tabs';
+import { createWorkspace, type TabSession, type Workspace } from '../state/workspace';
 
 const WORKSPACE_KEY = 'font-desk-workspace-v1';
 const DATABASE_NAME = 'font-desk';
@@ -49,7 +45,19 @@ export function readStoredWorkspace(defaults: AppDefaults): Workspace {
     const savedTabs = isRecord(saved.tabs) ? saved.tabs : {};
     for (const id of tabIds) {
       const candidate = savedTabs[id];
-      if (!isRecord(candidate)) continue;
+      if (!isRecord(candidate)) {
+        // A tab added since this snapshot was saved shows the loaded fonts the way
+        // adding them would have: the first one on a single-font tab, otherwise all.
+        if (defaults.tabs[id].activateNewFonts) {
+          tabs[id] = {
+            ...tabs[id],
+            active: Object.fromEntries(
+              order.map((fontId, index) => [fontId, !isSingleFont(id) || index === 0]),
+            ),
+          };
+        }
+        continue;
+      }
       const controlsResult = controlsSchema.partial().safeParse(candidate.controls);
       const controls = { ...tabs[id].controls };
       if (controlsResult.success) {
@@ -60,10 +68,13 @@ export function readStoredWorkspace(defaults: AppDefaults): Workspace {
         }
       }
       const active: Record<string, boolean> = isRecord(candidate.active)
-        ? Object.entries(candidate.active).reduce<Record<string, boolean>>((result, [fontId, enabled]) => {
-            if (typeof enabled === 'boolean') result[fontId] = enabled;
-            return result;
-          }, {})
+        ? Object.entries(candidate.active).reduce<Record<string, boolean>>(
+            (result, [fontId, enabled]) => {
+              if (typeof enabled === 'boolean') result[fontId] = enabled;
+              return result;
+            },
+            {},
+          )
         : tabs[id].active;
       const typing = isRecord(candidate.typing) ? candidate.typing : {};
       tabs[id] = {
@@ -106,7 +117,8 @@ function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, 1);
     request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(FONT_STORE)) request.result.createObjectStore(FONT_STORE);
+      if (!request.result.objectStoreNames.contains(FONT_STORE))
+        request.result.createObjectStore(FONT_STORE);
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error('Font storage could not be opened'));

@@ -8,13 +8,15 @@ export function OnScreenKeyboard({
   disabled,
   onInsert,
   onBackspace,
+  initialShift = false,
 }: {
   layout: KeyboardLayout;
   disabled?: boolean;
+  initialShift?: boolean;
   onInsert: (text: string) => void;
   onBackspace: () => void;
 }) {
-  const [shift, setShift] = useState(false);
+  const [shift, setShift] = useState(initialShift);
   // Keep the caret in the textarea while clicking keys.
   const keepFocus = (e: React.MouseEvent) => e.preventDefault();
   const codes = (key: string) =>

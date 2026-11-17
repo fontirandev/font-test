@@ -40,6 +40,7 @@ export function defaultText(id: TabId, defaults: AppDefaults): string {
   if (id === 'weights') return defaults.texts.weights;
   if (id === 'typing-test') return toSingleLine(defaults.texts.typingTest);
   if (id === 'live-typing') return toSingleLine(defaults.texts.liveTyping);
+  if (id === 'paragraph') return defaults.texts.paragraph;
   return sampleText;
 }
 
@@ -60,7 +61,7 @@ function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings
  * The text tabs are one workspace for testing a sample: every control changed in
  * one of them (letterforms, direction, alignment…) carries over to the others.
  */
-export const linkedTabs: readonly TabId[] = ['typing-test', 'live-typing', 'weights'];
+export const linkedTabs: readonly TabId[] = ['typing-test', 'live-typing', 'paragraph', 'weights'];
 
 /** Apply control values to the given tabs (every tab by default) that support them. */
 function applyShared(
@@ -173,7 +174,9 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         ...tab,
         active: isSingleFont(action.tab)
           ? Object.fromEntries(
-              Object.keys(tab.active).map((id) => [id, id === action.id && !tab.active[id]]),
+              // Every loaded font, not just the ones this tab has seen, so a tab
+              // added after the fonts were loaded can still turn one on.
+              state.order.map((id) => [id, id === action.id && !tab.active[id]]),
             )
           : { ...tab.active, [action.id]: !tab.active[action.id] },
       };
@@ -202,7 +205,10 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         controls: defaults.controls,
         text: defaultText(action.tab, action.defaults),
       };
-      let tabs = applyShared({ ...state.tabs, [action.tab]: next }, sharedDefaults(action.defaults));
+      let tabs = applyShared(
+        { ...state.tabs, [action.tab]: next },
+        sharedDefaults(action.defaults),
+      );
       if (linkedTabs.includes(action.tab)) {
         const { fontSize: _size, display: _display, axes: _axes, ...own } = defaults.controls;
         tabs = applyShared(tabs, own, linkedTabs);

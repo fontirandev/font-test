@@ -9,6 +9,11 @@ import { z } from 'zod';
 export const sampleText =
   'به تماشای جهان بنشین؛ هر حرف، پنجره‌ای به دنیایی تازه است.\nطراحی حروف فارسی، پیوندی میان خوانایی و زیبایی است.';
 
+/** Multi-line sample the paragraph tab starts from. */
+export const paragraphText =
+  'حروف، پیش از آنکه خوانده شوند، دیده می‌شوند. چشم خواننده در یک نگاه شکل کلمه را می‌گیرد و ذهن، معنا را از میان فاصله‌ها، اتصال‌ها و ریتم سطرها بیرون می‌کشد. اگر فاصله‌ی میان کلمات کمی بیشتر یا کمتر از اندازه باشد، یا دندانه‌ها و کشیدگی‌ها هماهنگ نباشند، خواندن کُند می‌شود بی‌آنکه خواننده بداند چرا.\n' +
+  'یک فونت خوب در متن بلند خودش را نشان می‌دهد: در پاراگرافی که سطرهایش پشت سر هم می‌آیند، در اعداد ۱۲۳۴۵۶۷۸۹۰ و نشانه‌هایی مثل «»، ؛ و ؟، و در کلماتی که با نیم‌فاصله نوشته می‌شوند مثل می‌روم، خانه‌ها و بزرگ‌تر.';
+
 export const toSingleLine = (text: string) => text.replace(/\s*[\r\n]+\s*/g, ' ');
 export const weightsSampleText = 'آبشار وزن';
 export const WEIGHTS_TEXT_MAX = 32;
@@ -62,6 +67,7 @@ const line = z.string().max(TEXT_MAX);
 export const textsSchema = z.strictObject({
   typingTest: line.default(toSingleLine(sampleText)),
   liveTyping: line.default(toSingleLine(sampleText)),
+  paragraph: line.default(paragraphText),
   /** The short editable sample for the weight-overlay tab. */
   weights: z.string().max(WEIGHTS_TEXT_MAX).default(weightsSampleText),
   languages: z

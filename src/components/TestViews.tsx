@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
-import { diacriticGroups, insertKeyGroups, persianAlphabet } from '../lib/samples';
+import { diacriticGroups, persianAlphabet } from '../lib/samples';
 import {
   languageSheets,
   parseCharacters,
@@ -288,7 +288,7 @@ export function TestViews({
   const [letter, setLetter] = useState('ب');
   const [diacriticLang, setDiacriticLang] = useState<'fa' | 'ar'>('fa');
   const [qaFilter, setQaFilter] = useState<QaFilter>('all');
-  const liveInput = useRef<HTMLInputElement>(null);
+  const liveInput = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const [keyboard, setKeyboard] = useState<KeyboardId | null>(null);
   const keyboardLayout = keyboardLayouts.find(({ id }) => id === keyboard);
   // Insert at the caret (replacing any selection) and keep typing from there.
@@ -349,6 +349,41 @@ export function TestViews({
     setPlaying(true);
   }, [fontKey, tabId, dispatch]);
   const disabled = fonts.length === 0;
+  // Keyboard toggles and the open keyboard, shared by the live typing and paragraph tabs.
+  const keyboardBar = (
+    <>
+      <div className="insert-keys mt-2">
+        <div className="insert-key-group" role="group" aria-label="صفحه‌کلید">
+          {keyboardLayouts.map(({ id, name }) => (
+            <Button
+              key={id}
+              className="keyboard-toggle"
+              aria-pressed={keyboard === id}
+              disabled={disabled}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setKeyboard(keyboard === id ? null : id)}
+            >
+              ⌨ {name}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {keyboardLayout && (
+        <div className="osk-pair" key={keyboardLayout.id}>
+          {[false, true].map((shifted) => (
+            <OnScreenKeyboard
+              key={String(shifted)}
+              layout={keyboardLayout}
+              initialShift={shifted}
+              disabled={disabled}
+              onInsert={(text) => insertText(text)}
+              onBackspace={() => insertText('', true)}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
   return (
     <>
       {tabId === 'typing-test' && (
@@ -423,56 +458,7 @@ export function TestViews({
               }
             />
           </label>
-          <div className="insert-keys mt-2">
-            <Button disabled={disabled} onClick={() => insertText('\u200c')}>
-              نیم‌فاصله
-            </Button>
-            {insertKeyGroups.map((group) => (
-              <div
-                key={group.name}
-                className="insert-key-group"
-                role="group"
-                aria-label={group.name}
-              >
-                {group.keys.map(({ char, label, title }) => (
-                  <Button
-                    key={char}
-                    className="insert-key"
-                    disabled={disabled}
-                    title={`${title ?? group.name} (U+${char.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')})`}
-                    // Keep the caret in the textarea while clicking.
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertText(char)}
-                  >
-                    {label ?? char}
-                  </Button>
-                ))}
-              </div>
-            ))}
-            <div className="insert-key-group" role="group" aria-label="صفحه‌کلید">
-              {keyboardLayouts.map(({ id, name }) => (
-                <Button
-                  key={id}
-                  className="keyboard-toggle"
-                  aria-pressed={keyboard === id}
-                  disabled={disabled}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setKeyboard(keyboard === id ? null : id)}
-                >
-                  ⌨ {name}
-                </Button>
-              ))}
-            </div>
-          </div>
-          {keyboardLayout && (
-            <OnScreenKeyboard
-              key={keyboardLayout.id}
-              layout={keyboardLayout}
-              disabled={disabled}
-              onInsert={(text) => insertText(text)}
-              onBackspace={() => insertText('', true)}
-            />
-          )}
+          {keyboardBar}
         </div>
       )}
       {tabId === 'connections' && (
@@ -490,6 +476,22 @@ export function TestViews({
               </Button>
             ))}
           </div>
+        </div>
+      )}
+      {tabId === 'paragraph' && (
+        <div className="text-field panel mb-1">
+          {keyboardBar}
+          {fonts[0] && (
+            <textarea
+              ref={liveInput}
+              aria-label="متن پاراگراف"
+              className="paragraph-input"
+              style={previewStyle(fonts[0], tab)}
+              value={tab.text}
+              disabled={disabled}
+              onChange={(e) => dispatch({ type: 'set-text', tab: tabId, text: e.target.value })}
+            />
+          )}
         </div>
       )}
       {tabId === 'qa-report' && fonts[0] && (
@@ -521,130 +523,132 @@ export function TestViews({
         <WeightsOverlay tab={tab} fonts={fonts} dispatch={dispatch} />
       )}
       {tabId === 'metadata' && !disabled && <Metadata fonts={fonts} />}
-      {(tabId === 'weights' || tabId === 'metadata' ? [] : fonts).map((font, index) => {
-        const style = previewStyle(font, tab);
-        return (
-          <section
-            className={
-              // A single-font tab shows its one font bare: no card, no name heading.
-              isSingleFont(tabId)
-                ? `preview-bare ${tabId === 'diacritics' ? 'diacritics-sheet' : ''} ${tabId === 'glyphs' ? 'glyphs-sheet' : ''} ${tabId === 'qa-report' ? 'qa-sheet' : ''}`
-                : `preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`
-            }
-            key={font.id}
-          >
-            {!isSingleFont(tabId) && (
-              <h2 className="preview-heading" title={font.name}>
-                <span className="preview-heading-name">{font.fileName}</span>
-                {tabId === 'live-typing' && (
-                  <span className="preview-heading-count">{index + 1}</span>
-                )}
-              </h2>
-            )}
-            {(tabId === 'typing-test' || tabId === 'live-typing') &&
-              (tabId === 'typing-test' ? (
-                <div
-                  className="preview-text preview-text-line"
-                  style={style}
-                  ref={(el) => {
-                    // Keep the newest typed letter in view while typing.
-                    if (!el || !playing) return;
-                    const rtl = getComputedStyle(el).direction === 'rtl';
-                    el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
-                  }}
-                >
-                  {segments.slice(0, position).join('')}
-                </div>
-              ) : (
-                <div className="preview-text preview-text-compact" style={style}>
-                  {tab.text}
-                </div>
-              ))}
-            {tabId === 'languages' &&
-              languageSheets
-                .map((sheet) => ({ ...sheet, text: texts.languages[sheet.id] }))
-                .map((sample) => (
-                  <article key={sample.id} className="language-sample panel" lang={sample.lang}>
-                    <h2 className="preview-heading">
-                      <span className="preview-heading-name">{sample.title}</span>
-                      <span className="preview-heading-count" dir="ltr">
-                        {sample.id}
-                      </span>
-                    </h2>
-                    <p className="language-sample-main" style={style}>
-                      {sample.text}
-                    </p>
-                    <p
-                      className="language-sample-reference"
-                      title="نمایش با فونت رابط کاربری برای تشخیص کاراکترهای گمشده"
-                    >
-                      {sample.text}
-                    </p>
-                  </article>
+      {(tabId === 'weights' || tabId === 'metadata' || tabId === 'paragraph' ? [] : fonts).map(
+        (font, index) => {
+          const style = previewStyle(font, tab);
+          return (
+            <section
+              className={
+                // A single-font tab shows its one font bare: no card, no name heading.
+                isSingleFont(tabId)
+                  ? `preview-bare ${tabId === 'diacritics' ? 'diacritics-sheet' : ''} ${tabId === 'glyphs' ? 'glyphs-sheet' : ''} ${tabId === 'qa-report' ? 'qa-sheet' : ''}`
+                  : `preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`
+              }
+              key={font.id}
+            >
+              {!isSingleFont(tabId) && (
+                <h2 className="preview-heading" title={font.name}>
+                  <span className="preview-heading-name">{font.fileName}</span>
+                  {tabId === 'live-typing' && (
+                    <span className="preview-heading-count">{index + 1}</span>
+                  )}
+                </h2>
+              )}
+              {(tabId === 'typing-test' || tabId === 'live-typing') &&
+                (tabId === 'typing-test' ? (
+                  <div
+                    className="preview-text preview-text-line"
+                    style={style}
+                    ref={(el) => {
+                      // Keep the newest typed letter in view while typing.
+                      if (!el || !playing) return;
+                      const rtl = getComputedStyle(el).direction === 'rtl';
+                      el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
+                    }}
+                  >
+                    {segments.slice(0, position).join('')}
+                  </div>
+                ) : (
+                  <div className="preview-text preview-text-compact" style={style}>
+                    {tab.text}
+                  </div>
                 ))}
-            {tabId === 'characters' && (
-              <>
-                <div className="char-grid" style={{ fontSize: style.fontSize }}>
-                  {parseCharacters(texts.characters)
-                    .map((char) => ({
-                      char,
-                      missing: font.parsed
-                        ? Array.from(char).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0)
-                        : null,
-                    }))
-                    .filter(({ missing }) => tab.controls.showMissing || !missing)
-                    .map(({ char, missing }) => (
-                      <div
-                        className={`char-cell ${missing ? 'char-cell-missing' : ''}`}
-                        key={char}
-                        title={`${missing ? 'پشتیبانی نمی‌شود — ' : ''}${codePoints(char)}`}
-                      >
-                        <span className="char-glyph" style={style}>
-                          {char}
+              {tabId === 'languages' &&
+                languageSheets
+                  .map((sheet) => ({ ...sheet, text: texts.languages[sheet.id] }))
+                  .map((sample) => (
+                    <article key={sample.id} className="language-sample panel" lang={sample.lang}>
+                      <h2 className="preview-heading">
+                        <span className="preview-heading-name">{sample.title}</span>
+                        <span className="preview-heading-count" dir="ltr">
+                          {sample.id}
                         </span>
-                        <span className="char-label">{char}</span>
-                      </div>
-                    ))}
-                </div>
-                {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
-              </>
-            )}
-            {tabId === 'connections' && <ConnectionsGrid style={style} letter={letter} />}
-            {tabId === 'zwnj' && (
-              <table className="data-table zwnj-table">
-                <thead>
-                  <tr>
-                    {['نیم‌فاصله U+200C', 'بدون فاصله', 'فاصله معمولی'].map((label) => (
-                      <th key={label}>{label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ...parseZwnjWords(texts.zwnjPersian).map((row) => ({ row, lang: 'fa' })),
-                    ...parseZwnjWords(texts.zwnjArabic).map((row) => ({ row, lang: 'ar' })),
-                  ].map(({ row, lang }, i) => (
-                    <tr key={i} lang={lang}>
-                      {row.map((text, j) => (
-                        <td key={j} style={style}>
-                          {text}
-                        </td>
+                      </h2>
+                      <p className="language-sample-main" style={style}>
+                        {sample.text}
+                      </p>
+                      <p
+                        className="language-sample-reference"
+                        title="نمایش با فونت رابط کاربری برای تشخیص کاراکترهای گمشده"
+                      >
+                        {sample.text}
+                      </p>
+                    </article>
+                  ))}
+              {tabId === 'characters' && (
+                <>
+                  <div className="char-grid" style={{ fontSize: style.fontSize }}>
+                    {parseCharacters(texts.characters)
+                      .map((char) => ({
+                        char,
+                        missing: font.parsed
+                          ? Array.from(char).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0)
+                          : null,
+                      }))
+                      .filter(({ missing }) => tab.controls.showMissing || !missing)
+                      .map(({ char, missing }) => (
+                        <div
+                          className={`char-cell ${missing ? 'char-cell-missing' : ''}`}
+                          key={char}
+                          title={`${missing ? 'پشتیبانی نمی‌شود — ' : ''}${codePoints(char)}`}
+                        >
+                          <span className="char-glyph" style={style}>
+                            {char}
+                          </span>
+                          <span className="char-label">{char}</span>
+                        </div>
+                      ))}
+                  </div>
+                  {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
+                </>
+              )}
+              {tabId === 'connections' && <ConnectionsGrid style={style} letter={letter} />}
+              {tabId === 'zwnj' && (
+                <table className="data-table zwnj-table">
+                  <thead>
+                    <tr>
+                      {['نیم‌فاصله U+200C', 'بدون فاصله', 'فاصله معمولی'].map((label) => (
+                        <th key={label}>{label}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {tabId === 'diacritics' && (
-              <DiacriticsSheet font={font} style={style} lang={diacriticLang} />
-            )}
-            {tabId === 'glyphs' && <Glyphs font={font} />}
-            {tabId === 'qa-report' && (
-              <QaReport font={font} allFonts={allFonts} filter={qaFilter} />
-            )}
-          </section>
-        );
-      })}
+                  </thead>
+                  <tbody>
+                    {[
+                      ...parseZwnjWords(texts.zwnjPersian).map((row) => ({ row, lang: 'fa' })),
+                      ...parseZwnjWords(texts.zwnjArabic).map((row) => ({ row, lang: 'ar' })),
+                    ].map(({ row, lang }, i) => (
+                      <tr key={i} lang={lang}>
+                        {row.map((text, j) => (
+                          <td key={j} style={style}>
+                            {text}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {tabId === 'diacritics' && (
+                <DiacriticsSheet font={font} style={style} lang={diacriticLang} />
+              )}
+              {tabId === 'glyphs' && <Glyphs font={font} />}
+              {tabId === 'qa-report' && (
+                <QaReport font={font} allFonts={allFonts} filter={qaFilter} />
+              )}
+            </section>
+          );
+        },
+      )}
     </>
   );
 }

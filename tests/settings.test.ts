@@ -109,6 +109,7 @@ test('default texts: old payloads get the built-in texts, saved texts survive a 
   full.texts = {
     typingTest: big,
     liveTyping: big,
+    paragraph: big,
     weights: 'ب'.repeat(32),
     languages: { arabic: big, quran: big, urdu: big, kurdish: big },
     characters: big,

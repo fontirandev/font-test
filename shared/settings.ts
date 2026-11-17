@@ -45,9 +45,7 @@ export function createFactoryDefaults(): AppDefaults {
       // Font size is shared by every tab, so no tab gets its own size.
       tabIds.map((id) => [
         id,
-        tabDefaultsSchema.parse(
-          fixedReferenceTabs.has(id) ? { controls: { fontSize: 32 } } : {},
-        ),
+        tabDefaultsSchema.parse(fixedReferenceTabs.has(id) ? { controls: { fontSize: 32 } } : {}),
       ]),
     ) as AppDefaults['tabs'],
     texts: createFactoryTexts(),
@@ -80,6 +78,9 @@ function migrateLegacy(input: unknown): unknown {
     }
   }
   if (root.sort === undefined && legacySort !== undefined) root.sort = legacySort;
+  // Tabs added after the payload was saved start from their defaults.
+  const tabs = root.tabs as Record<string, unknown>;
+  for (const id of tabIds) if (!(id in tabs)) tabs[id] = {};
   return input;
 }
 

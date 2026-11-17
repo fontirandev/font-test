@@ -1,12 +1,6 @@
 /** Capability declarations are the single source of truth for visible controls. */
 export type ControlId =
-  | 'display'
-  | 'fontSize'
-  | 'direction'
-  | 'alignment'
-  | 'features'
-  | 'axes'
-  | 'showMissing';
+  'display' | 'fontSize' | 'direction' | 'alignment' | 'features' | 'axes' | 'showMissing';
 
 export const tabDefinitions = [
   {
@@ -18,6 +12,13 @@ export const tabDefinitions = [
     id: 'live-typing',
     title: 'تایپ',
     controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
+  },
+  {
+    // A free-form textarea set in the one active font.
+    id: 'paragraph',
+    title: 'پاراگراف',
+    controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
+    singleFont: true,
   },
   {
     id: 'weights',

@@ -259,6 +259,14 @@ test('workspace choices survive a browser-storage round trip', () => {
     });
     storeWorkspace(workspace);
     assert.deepEqual(readStoredWorkspace(defaults), workspace);
+    // A tab added after the snapshot was saved shows the loaded fonts as adding them would.
+    const older = JSON.parse(JSON.stringify(workspace));
+    delete older.tabs['paragraph'];
+    delete older.tabs['live-typing'];
+    localStorage.setItem('font-desk-workspace-v1', JSON.stringify(older));
+    const restored = readStoredWorkspace(defaults);
+    assert.deepEqual(restored.tabs['paragraph'].active, { a: true, b: false });
+    assert.deepEqual(restored.tabs['live-typing'].active, { a: true, b: true });
   } finally {
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,

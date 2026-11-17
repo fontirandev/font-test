@@ -81,6 +81,16 @@ export function SettingsDialog({
               onChange={(e) => set({ liveTyping: toSingleLine(e.target.value) })}
             />
           </Section>
+          <Section tab="paragraph">
+            <textarea
+              aria-label={`متن ${tabTitle('paragraph')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              dir="rtl"
+              value={texts.paragraph}
+              onChange={(e) => set({ paragraph: e.target.value })}
+            />
+          </Section>
           <Section tab="weights" hint="متن کوتاهی که وزن‌های فونت روی هم نمایش می‌دهند.">
             <input
               type="text"

@@ -127,26 +127,6 @@ export function PreviewControls({
           </div>
         </div>
       )}
-      {permitted('features') &&
-        [false, true].map((stylistic) => {
-          const tags = features.filter((tag) => isStylisticSet(tag) === stylistic);
-          return (
-            tags.length > 0 && (
-              <section className="control-section" key={String(stylistic)}>
-                <h3>{stylistic ? 'Stylistic sets' : 'Letterforms'}</h3>
-                {tags.map((tag) => (
-                  <Toggle
-                    key={tag}
-                    label={featureLabel(tag, featureNames)}
-                    checked={c.features[tag] ?? onByDefault.has(tag)}
-                    disabled={disabled}
-                    onChange={(value) => onChange({ features: { ...c.features, [tag]: value } })}
-                  />
-                ))}
-              </section>
-            )
-          );
-        })}
       {permitted('axes') && uniqueAxes.length > 0 && (
         <section className="control-section">
           <h3>Variable</h3>
@@ -172,6 +152,26 @@ export function PreviewControls({
           </div>
         </section>
       )}
+      {permitted('features') &&
+        [false, true].map((stylistic) => {
+          const tags = features.filter((tag) => isStylisticSet(tag) === stylistic);
+          return (
+            tags.length > 0 && (
+              <section className="control-section" key={String(stylistic)}>
+                <h3>{stylistic ? 'Stylistic sets' : 'Letterforms'}</h3>
+                {tags.map((tag) => (
+                  <Toggle
+                    key={tag}
+                    label={featureLabel(tag, featureNames)}
+                    checked={c.features[tag] ?? onByDefault.has(tag)}
+                    disabled={disabled}
+                    onChange={(value) => onChange({ features: { ...c.features, [tag]: value } })}
+                  />
+                ))}
+              </section>
+            )
+          );
+        })}
       {permitted('showMissing') && (
         <div className="control-section">
           <Toggle

@@ -93,8 +93,18 @@ export function readStoredWorkspace(defaults: AppDefaults): Workspace {
         },
       } satisfies TabSession;
     }
+    // Axis values are one setting for every tab: snapshots from before that rule (or
+    // from before a tab supported axes) take the open tab's values everywhere.
+    const currentTab = isTabId(saved.currentTab) ? saved.currentTab : fallback.currentTab;
+    const axesSource = supportsControl(currentTab, 'axes') ? currentTab : tabIds[0];
+    const axes = tabs[axesSource].controls.axes;
+    for (const id of tabIds) {
+      if (supportsControl(id, 'axes')) {
+        tabs[id] = { ...tabs[id], controls: { ...tabs[id].controls, axes } };
+      }
+    }
     return {
-      currentTab: isTabId(saved.currentTab) ? saved.currentTab : fallback.currentTab,
+      currentTab,
       order,
       sort: validSort(saved.sort),
       tabs,

@@ -23,7 +23,7 @@ export const tabDefinitions = [
   {
     id: 'weights',
     title: 'آبشار وزن',
-    controls: ['fontSize', 'direction', 'features'],
+    controls: ['fontSize', 'direction', 'features', 'axes'],
   },
   {
     id: 'languages',
@@ -31,12 +31,14 @@ export const tabDefinitions = [
     controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
-  // Reference sheets deliberately use a consistent 32pt, solid rendering.
-  // Keeping their controls empty also removes the sidebar settings section.
-  { id: 'diacritics', title: 'اعراب', controls: [], singleFont: true },
-  { id: 'characters', title: 'کاراکترها', controls: [], singleFont: true },
-  { id: 'connections', title: 'اتصالات', controls: [], singleFont: true },
-  { id: 'zwnj', title: 'نیم‌فاصله', controls: [], singleFont: true },
+  // Reference sheets deliberately use a consistent 32pt, solid rendering; only the
+  // variable axes (shared by every tab) can be changed there.
+  { id: 'diacritics', title: 'اعراب', controls: ['axes'], singleFont: true },
+  { id: 'characters', title: 'کاراکترها', controls: ['axes'], singleFont: true },
+  { id: 'connections', title: 'اتصالات', controls: ['axes'], singleFont: true },
+  { id: 'zwnj', title: 'نیم‌فاصله', controls: ['axes'], singleFont: true },
+  // Glyph outlines, metadata and the QA report read the font file itself, so CSS
+  // axis values have nothing to change there; they keep no settings section.
   { id: 'glyphs', title: 'لیست گلیف‌ها', controls: [], singleFont: true },
   { id: 'metadata', title: 'متادیتا', controls: [] },
   { id: 'qa-report', title: 'گزارش QA', controls: [], singleFont: true },

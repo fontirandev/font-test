@@ -222,6 +222,7 @@ function WeightsOverlay({
             fontFamily: `"${font.family}"`,
             fontWeight: font.weight,
             fontFeatureSettings: featureCSS(tab.controls.features, font.features),
+            fontVariationSettings: variationCSS(tab.controls.axes, font.axes),
             fontSynthesis: 'none',
             zIndex: index + 1,
           };

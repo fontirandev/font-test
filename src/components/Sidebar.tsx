@@ -37,7 +37,14 @@ export function Sidebar({
   const canReorder = !loading && fonts.length > 1;
   const [filesOpen, setFilesOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const hasControls = tabDefinitions.find(({ id }) => id === tabId)!.controls.length > 0;
+  // The Variable section only appears for variable fonts, so a tab whose sole
+  // control is the axes has no settings section without one.
+  const hasControls = tabDefinitions
+    .find(({ id }) => id === tabId)!
+    .controls.some(
+      (control) =>
+        control !== 'axes' || fonts.some((font) => tab.active[font.id] && font.axes.length > 0),
+    );
   const sorted = orderedFonts(fonts, ordering);
   const activeCount = fonts.filter((font) => tab.active[font.id]).length;
   const move = (id: string, before: string) =>

@@ -137,9 +137,23 @@ test('irrelevant controls are rejected at the tab boundary', () => {
   assert.equal(state.tabs.metadata.controls.fontSize, initial.tabs.metadata.controls.fontSize);
   assert.equal(supportsControl('metadata', 'features'), false);
   assert.equal(supportsControl('glyphs', 'features'), false);
-  assert.equal(supportsControl('weights', 'axes'), false);
+  assert.equal(supportsControl('glyphs', 'axes'), false);
 });
-test('reference sheets have no adjustable controls and keep the 32pt default', () => {
+test('variable axes are one value shared by every tab that offers them', () => {
+  const state = workspaceReducer(setup(), {
+    type: 'set-controls',
+    tab: 'diacritics',
+    patch: { axes: { wght: 650 } },
+  });
+  for (const id of tabIds) {
+    if (supportsControl(id, 'axes'))
+      assert.deepEqual(state.tabs[id].controls.axes, { wght: 650 }, id);
+  }
+  for (const id of ['weights', 'paragraph', 'characters', 'connections', 'zwnj'] as const) {
+    assert.equal(supportsControl(id, 'axes'), true, id);
+  }
+});
+test('reference sheets only offer the shared axes and keep the 32pt default', () => {
   const workspace = createWorkspace(createFactoryDefaults());
   for (const tab of ['diacritics', 'characters', 'connections', 'zwnj'] as const) {
     assert.equal(supportsControl(tab, 'fontSize'), false, tab);
@@ -267,6 +281,15 @@ test('workspace choices survive a browser-storage round trip', () => {
     const restored = readStoredWorkspace(defaults);
     assert.deepEqual(restored.tabs['paragraph'].active, { a: true, b: false });
     assert.deepEqual(restored.tabs['live-typing'].active, { a: true, b: true });
+    // Snapshots whose tabs disagree on axes restore with the open tab's values everywhere.
+    const mixed = JSON.parse(JSON.stringify(workspace));
+    mixed.currentTab = 'languages';
+    mixed.tabs['languages'].controls.axes = { wght: 300 };
+    mixed.tabs['typing-test'].controls.axes = { wght: 800 };
+    localStorage.setItem('font-desk-workspace-v1', JSON.stringify(mixed));
+    const unified = readStoredWorkspace(defaults);
+    assert.deepEqual(unified.tabs['typing-test'].controls.axes, { wght: 300 });
+    assert.deepEqual(unified.tabs['zwnj'].controls.axes, { wght: 300 });
   } finally {
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,

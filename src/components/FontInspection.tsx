@@ -1,13 +1,31 @@
 import { useMemo, useState } from 'react';
 import type { LoadedFont } from '../lib/fonts';
 import { GlyphDetail } from './GlyphDetail';
+import { Button } from './ui';
 
 /** Drawing height of each glyph, in px; the same for every glyph and every font. */
 const glyphHeight = 48;
 
+/** grid: a labelled cell per glyph; row: the glyphs set side by side in one box. */
+const glyphViews = [
+  { id: 'grid', label: 'جدول' },
+  { id: 'row', label: 'ردیف' },
+] as const;
+type GlyphView = (typeof glyphViews)[number]['id'];
+/**
+ * The open view outlives the tab (switching tabs unmounts the list) but not a
+ * reload, so it is kept in memory rather than in browser storage.
+ */
+let lastGlyphView: GlyphView = 'grid';
+
 export function Glyphs({ font }: { font: LoadedFont }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
+  const [view, setViewState] = useState<GlyphView>(lastGlyphView);
+  const setView = (next: GlyphView) => {
+    lastGlyphView = next;
+    setViewState(next);
+  };
   const parsed = font.parsed;
   const matches = useMemo(() => {
     if (!parsed) return [];
@@ -37,6 +55,18 @@ export function Glyphs({ font }: { font: LoadedFont }) {
   return (
     <div>
       <div className="flex items-center gap-3 border-b border-line p-3">
+        <div className="joining-letters" role="group" aria-label="نمایش گلیف‌ها">
+          {glyphViews.map(({ id, label }) => (
+            <Button
+              key={id}
+              className="joining-letter"
+              aria-pressed={view === id}
+              onClick={() => setView(id)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
         <input
           className="text-input max-w-72"
           placeholder="نام، کاراکتر، U+ یا شماره گلیف"
@@ -48,33 +78,64 @@ export function Glyphs({ font }: { font: LoadedFont }) {
         />
         <span className="text-muted">{matches.length} گلیف</span>
       </div>
-      <div className="glyph-grid" dir="ltr">
-        {matches.map((index) => {
-          const g = parsed.glyphs.get(index);
-          const box = g.getBoundingBox();
-          // Centre each glyph horizontally; the vertical frame is shared.
-          const centre = box.x2 > box.x1 ? (box.x1 + box.x2) / 2 : (g.advanceWidth ?? 0) / 2;
-          return (
-            <button
-              key={index}
-              className="glyph-cell"
-              aria-label={`گلیف ${index}: ${g.name ?? ''}`}
-              onClick={() => setSelected(index)}
-            >
-              <svg
-                width="100%"
-                height={glyphHeight}
-                viewBox={`${centre - frame / 2} ${-ascender - pad} ${frame} ${frame}`}
-                aria-hidden="true"
+      {view === 'row' && (
+        <div className="glyph-row" dir="ltr">
+          {matches.map((index) => {
+            const g = parsed.glyphs.get(index);
+            const box = g.getBoundingBox();
+            // Each glyph takes its advance width; zero-width marks take their ink width.
+            const left = Math.min(0, box.x1);
+            const width = Math.max(g.advanceWidth ?? 0, box.x2) - left || frame / 4;
+            return (
+              <button
+                key={index}
+                className="glyph-row-item"
+                aria-label={`گلیف ${index}: ${g.name ?? ''}`}
+                title={g.name ?? `#${index}`}
+                onClick={() => setSelected(index)}
               >
-                <path d={g.getPath(0, 0, parsed.unitsPerEm).toPathData(2)} fill="currentColor" />
-              </svg>
-              <small title={g.name ?? undefined}>{g.name ?? `#${index}`}</small>
-              <small>#{index}</small>
-            </button>
-          );
-        })}
-      </div>
+                <svg
+                  width={(width / frame) * glyphHeight}
+                  height={glyphHeight}
+                  viewBox={`${left} ${-ascender - pad} ${width} ${frame}`}
+                  aria-hidden="true"
+                >
+                  <path d={g.getPath(0, 0, parsed.unitsPerEm).toPathData(2)} fill="currentColor" />
+                </svg>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {view === 'grid' && (
+        <div className="glyph-grid" dir="ltr">
+          {matches.map((index) => {
+            const g = parsed.glyphs.get(index);
+            const box = g.getBoundingBox();
+            // Centre each glyph horizontally; the vertical frame is shared.
+            const centre = box.x2 > box.x1 ? (box.x1 + box.x2) / 2 : (g.advanceWidth ?? 0) / 2;
+            return (
+              <button
+                key={index}
+                className="glyph-cell"
+                aria-label={`گلیف ${index}: ${g.name ?? ''}`}
+                onClick={() => setSelected(index)}
+              >
+                <svg
+                  width="100%"
+                  height={glyphHeight}
+                  viewBox={`${centre - frame / 2} ${-ascender - pad} ${frame} ${frame}`}
+                  aria-hidden="true"
+                >
+                  <path d={g.getPath(0, 0, parsed.unitsPerEm).toPathData(2)} fill="currentColor" />
+                </svg>
+                <small title={g.name ?? undefined}>{g.name ?? `#${index}`}</small>
+                <small>#{index}</small>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {matches.length === 0 && <p className="p-5 text-muted">گلیفی پیدا نشد.</p>}
       {selected !== null && (
         <GlyphDetail

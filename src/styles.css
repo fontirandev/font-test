@@ -1035,6 +1035,27 @@
     border: 1px solid var(--line);
     text-align: center;
   }
+  /* Row view: every glyph side by side in one box, without labels. */
+  .glyph-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    row-gap: 8px;
+    padding: 16px;
+    border: 1px solid var(--line);
+  }
+  .glyph-row-item {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .glyph-row-item:hover,
+  .glyph-row-item:focus-visible {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
   .glyph-cell small {
     display: block;
     overflow: hidden;

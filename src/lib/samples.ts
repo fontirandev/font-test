@@ -42,100 +42,65 @@ export function kerningForms(letter: string, other: string): string[] {
   // Contexts of one order often double as the other's (بجب is both); keep each once.
   return [...new Set(forms.filter((form): form is string => form !== null))];
 }
-/** One diacritics test page: grids of letter + mark cells, then sample text blocks. */
-export interface DiacriticSection {
+
+/** A diacritic (or a stack of them) the kerning tab can put on every letter. */
+export interface KerningMark {
   id: string;
-  title: string;
-  /** `grid` shows short items in cells; `block` shows whole sentences. */
-  layout: 'grid' | 'block';
-  items: { text: string; label: string }[];
+  /** The combining mark(s), in typing order. */
+  marks: string;
+  name: string;
 }
 
-const diacriticMarks = [
-  { id: 'fatha', mark: '\u064E', name: 'فتحه' },
-  { id: 'kasra', mark: '\u0650', name: 'کسره' },
-  { id: 'damma', mark: '\u064F', name: 'ضمه' },
-  { id: 'fathatan', mark: '\u064B', name: 'تنوین فتح' },
-  { id: 'kasratan', mark: '\u064D', name: 'تنوین کسر' },
-  { id: 'dammatan', mark: '\u064C', name: 'تنوین ضم' },
-  { id: 'shadda', mark: '\u0651', name: 'تشدید' },
-  { id: 'sukun', mark: '\u0652', name: 'سکون' },
-  { id: 'superscript-alef', mark: '\u0670', name: 'الف بالا' },
-];
-
-const stackedMarks = [
-  { id: 'shadda-fatha', marks: '\u0651\u064E', name: 'تشدید+فتحه' },
-  { id: 'shadda-kasra', marks: '\u0651\u0650', name: 'تشدید+کسره' },
-  { id: 'shadda-damma', marks: '\u0651\u064F', name: 'تشدید+ضمه' },
-  { id: 'shadda-fathatan', marks: '\u0651\u064B', name: 'تشدید+تنوین فتح' },
-  { id: 'shadda-kasratan', marks: '\u0651\u064D', name: 'تشدید+تنوین کسر' },
-  { id: 'shadda-dammatan', marks: '\u0651\u064C', name: 'تشدید+تنوین ضم' },
-];
-
-function diacriticSections(bases: string[], lang: string): DiacriticSection[] {
-  // Letters that commonly carry a shadda with a second mark stacked on it.
-  const stackBases = bases.filter((b) => 'بتثجحخدذرزسشصضطظعغفقكلمنهيکگ'.includes(b)).slice(0, 12);
-  return [
-    ...diacriticMarks.map(({ id, mark, name }) => ({
-      id: `${lang}-${id}`,
-      title: name,
-      layout: 'grid' as const,
-      items: bases.map((base) => ({ text: base + mark, label: base })),
-    })),
-    {
-      id: `${lang}-stacked`,
-      title: 'تشدید ترکیبی (mark / mkmk)',
-      layout: 'grid',
-      items: stackedMarks.flatMap(({ marks, name }) =>
-        stackBases.map((base) => ({ text: base + marks, label: name })),
-      ),
-    },
-  ];
-}
-
-/** Diacritic (اعراب) mark-positioning tests, per language. */
-export const diacriticGroups: { id: 'fa' | 'ar'; title: string; sections: DiacriticSection[] }[] = [
+/** Diacritics for the kerning tab, grouped for the button rows. */
+export const kerningMarkGroups: { id: string; title: string; marks: KerningMark[] }[] = [
   {
-    id: 'fa',
-    title: 'فارسی',
-    sections: [
-      ...diacriticSections(Array.from('ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی'), 'fa'),
-      {
-        id: 'fa-samples',
-        title: 'نمونه متن با اعراب',
-        layout: 'block',
-        items: [
-          { text: 'بِسْمِ اللهِ الرَّحْمنِ الرَّحيمِ', label: 'بسمه' },
-          { text: 'قُلْ هُوَ اللهُ أَحَدٌ', label: 'توحید' },
-          { text: 'اَلْحَمْدُ لِلَّهِ رَبِّ الْعالَمينَ', label: 'حمد' },
-          { text: 'كِتابٌ أَنْزَلْناهُ إِلَيْكَ مُبارَكٌ', label: 'آیه' },
-          { text: 'مُحَمَّدٌ رَسُولُ اللهِ', label: 'شهادت' },
-        ],
-      },
+    id: 'common',
+    title: 'فارسی و عربی',
+    marks: [
+      { id: 'fatha', marks: '\u064E', name: 'فتحه' },
+      { id: 'kasra', marks: '\u0650', name: 'کسره' },
+      { id: 'damma', marks: '\u064F', name: 'ضمه' },
+      { id: 'fathatan', marks: '\u064B', name: 'تنوین فتح' },
+      { id: 'kasratan', marks: '\u064D', name: 'تنوین کسر' },
+      { id: 'dammatan', marks: '\u064C', name: 'تنوین ضم' },
+      { id: 'shadda', marks: '\u0651', name: 'تشدید' },
+      { id: 'sukun', marks: '\u0652', name: 'سکون' },
+      // Persian writes the ezafe on ه with it (خانهٔ); Arabic seats hamza with it.
+      { id: 'hamza-above', marks: '\u0654', name: 'همزه بالا' },
+      { id: 'superscript-alef', marks: '\u0670', name: 'الف بالا' },
     ],
   },
   {
-    id: 'ar',
+    id: 'arabic',
     title: 'عربی',
-    sections: [
-      ...diacriticSections(Array.from('ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإئىة'), 'ar'),
-      {
-        id: 'ar-quran',
-        title: 'نمونه قرآنی / علامت‌گذاری',
-        layout: 'block',
-        items: [
-          { text: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ', label: 'الفاتحة ١' },
-          { text: 'ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ', label: 'الفاتحة ٢' },
-          { text: 'ٱلرَّحْمَٰنِ ٱلرَّحِيمِ', label: 'الفاتحة ٣' },
-          { text: 'مَٰلِكِ يَوْمِ ٱلدِّينِ', label: 'الفاتحة ٤' },
-          { text: 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ', label: 'الفاتحة ٥' },
-          { text: 'ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ', label: 'الفاتحة ٦' },
-          {
-            text: 'صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ',
-            label: 'الفاتحة ٧',
-          },
-        ],
-      },
+    marks: [
+      { id: 'maddah', marks: '\u0653', name: 'مد' },
+      { id: 'hamza-below', marks: '\u0655', name: 'همزه پایین' },
+      { id: 'subscript-alef', marks: '\u0656', name: 'الف پایین' },
+      { id: 'inverted-damma', marks: '\u0657', name: 'ضمه وارونه' },
+    ],
+  },
+  {
+    id: 'stacked',
+    title: 'ترکیبی',
+    marks: [
+      { id: 'shadda-fatha', marks: '\u0651\u064E', name: 'تشدید + فتحه' },
+      { id: 'shadda-kasra', marks: '\u0651\u0650', name: 'تشدید + کسره' },
+      { id: 'shadda-damma', marks: '\u0651\u064F', name: 'تشدید + ضمه' },
+      { id: 'shadda-fathatan', marks: '\u0651\u064B', name: 'تشدید + تنوین فتح' },
+      { id: 'shadda-kasratan', marks: '\u0651\u064D', name: 'تشدید + تنوین کسر' },
+      { id: 'shadda-dammatan', marks: '\u0651\u064C', name: 'تشدید + تنوین ضم' },
+      { id: 'shadda-superscript-alef', marks: '\u0651\u0670', name: 'تشدید + الف بالا' },
+      { id: 'hamza-fatha', marks: '\u0654\u064E', name: 'همزه + فتحه' },
+      { id: 'hamza-damma', marks: '\u0654\u064F', name: 'همزه + ضمه' },
+      { id: 'hamza-sukun', marks: '\u0654\u0652', name: 'همزه + سکون' },
+      { id: 'hamza-below-kasra', marks: '\u0655\u0650', name: 'همزه پایین + کسره' },
     ],
   },
 ];
+
+/** Puts `marks` after every letter of `text`; a kashida filler stays bare. */
+export function withMarks(text: string, marks: string): string {
+  if (!marks) return text;
+  return Array.from(text, (ch) => (ch === tatweel ? ch : ch + marks)).join('');
+}

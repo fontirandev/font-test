@@ -51,8 +51,8 @@ export const tabDefinitions = [
   },
   // Reference sheets deliberately use a consistent 32pt, solid rendering; only the
   // variable axes (shared by every tab) can be changed there.
-  { id: 'diacritics', title: 'اعراب', controls: ['axes'], singleFont: true },
-  { id: 'characters', title: 'کاراکترها', controls: ['axes'], singleFont: true },
+  // { id: 'diacritics', title: 'اعراب', controls: ['axes'], singleFont: true },
+  { id: 'characters', title: 'اعداد و علائم', controls: ['axes'], singleFont: true },
   { id: 'connections', title: 'کرنینگ', controls: ['axes'], singleFont: true },
   { id: 'zwnj', title: 'نیم‌فاصله', controls: ['axes'], singleFont: true },
   // Glyph outlines are drawn from the font file at the shared axis values.

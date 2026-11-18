@@ -40,7 +40,7 @@ export const defaultsSchema = z.strictObject({
 export type AppDefaults = z.infer<typeof defaultsSchema>;
 
 export function createFactoryDefaults(): AppDefaults {
-  const fixedReferenceTabs = new Set(['diacritics', 'characters', 'connections', 'zwnj']);
+  const fixedReferenceTabs = new Set(['characters', 'connections', 'zwnj']);
   return {
     version: 1,
     theme: 'light',
@@ -82,9 +82,13 @@ function migrateLegacy(input: unknown): unknown {
     }
   }
   if (root.sort === undefined && legacySort !== undefined) root.sort = legacySort;
-  // Tabs added after the payload was saved start from their defaults.
+  // Tabs added after the payload was saved start from their defaults; tabs since
+  // removed (such as the old diacritics sheet) are dropped.
   const tabs = root.tabs as Record<string, unknown>;
   for (const id of tabIds) if (!(id in tabs)) tabs[id] = {};
+  for (const id of Object.keys(tabs)) {
+    if (!(tabIds as readonly string[]).includes(id)) delete tabs[id];
+  }
   return input;
 }
 

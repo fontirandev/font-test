@@ -159,7 +159,7 @@ test('irrelevant controls are rejected at the tab boundary', () => {
 test('variable axes are one value shared by every tab that offers them', () => {
   const state = workspaceReducer(setup(), {
     type: 'set-controls',
-    tab: 'diacritics',
+    tab: 'characters',
     patch: { axes: { wght: 650 } },
   });
   for (const id of tabIds) {
@@ -172,7 +172,7 @@ test('variable axes are one value shared by every tab that offers them', () => {
 });
 test('reference sheets only offer the shared axes and keep the 32pt default', () => {
   const workspace = createWorkspace(createFactoryDefaults());
-  for (const tab of ['diacritics', 'characters', 'connections', 'zwnj'] as const) {
+  for (const tab of ['characters', 'connections', 'zwnj'] as const) {
     assert.equal(supportsControl(tab, 'fontSize'), false, tab);
     assert.equal(workspace.tabs[tab].controls.fontSize, 32, tab);
   }
@@ -195,6 +195,13 @@ test('old saved defaults with per-tab sort and retired controls are migrated', (
   assert.equal(migrated.tabs.weights.controls.lineHeight, 1.8);
   assert.equal(migrated.tabs.weights.controls.letterSpacing, 0);
   assert.equal(createWorkspace(migrated).sort, 'weight-desc');
+});
+test('saved defaults for a tab that no longer exists still load', () => {
+  const saved = JSON.parse(JSON.stringify(createFactoryDefaults()));
+  saved.tabs.diacritics = { activateNewFonts: true, controls: { fontSize: 32 } };
+  const migrated = normalizeDefaults(saved);
+  assert.equal('diacritics' in migrated.tabs, false);
+  assert.deepEqual(Object.keys(migrated.tabs).sort(), [...tabIds].sort());
 });
 test('defaults reject session data and invalid numeric controls', () => {
   assert.throws(() => normalizeDefaults({ ...createFactoryDefaults(), fonts }));

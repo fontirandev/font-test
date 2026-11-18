@@ -881,6 +881,61 @@
   }
   .toolbar-joining {
     min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* Kerning tab: diacritic buttons under the letters, one wrapped row per group. */
+  .kerning-marks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .kerning-mark-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  .kerning-mark-title {
+    margin-inline-end: 4px;
+    color: var(--soft);
+    font-size: 11px;
+    font-weight: 300;
+  }
+  .kerning-mark {
+    position: relative;
+    font-size: 20px;
+    line-height: 1.6;
+  }
+  /* The mark's name, shown at once on hover or keyboard focus (a title waits ~1s). */
+  .kerning-mark[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    z-index: 20;
+    padding: 4px 8px;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 2px);
+    transition:
+      opacity 100ms ease,
+      transform 100ms ease;
+  }
+  .kerning-mark[data-tooltip]:hover::after,
+  .kerning-mark[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
   .joining-letters {
     display: flex;
@@ -1461,43 +1516,6 @@
   .qa-detail {
     color: var(--muted);
     line-height: 1.5;
-  }
-  .diacritics-sections {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  /* Each mark (فتحه, کسره, …) is its own white card, apart from the others. */
-  .diacritics-section {
-    padding: 14px;
-    background: var(--panel);
-    color: var(--ink);
-    border: 1px solid var(--line);
-  }
-  .diacritics-section-title {
-    margin: 0 0 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-  }
-  .diacritics-blocks {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .diacritics-block {
-    padding: 14px 16px;
-    border: 1px solid var(--line);
-  }
-  .diacritics-block-missing {
-    border-color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 8%, transparent);
-  }
-  .diacritics-block-text {
-    margin: 8px 0 0;
-    line-height: 1.9;
-    direction: rtl;
-    overflow-wrap: anywhere;
   }
   .language-sample-main {
     padding: 14px 14px 10px;

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
-import { diacriticGroups, kerningForms, persianAlphabet } from '../lib/samples';
+import {
+  kerningForms,
+  kerningMarkGroups,
+  persianAlphabet,
+  withMarks,
+} from '../lib/samples';
 import {
   languageSheets,
   parseCharacters,
@@ -43,7 +48,16 @@ function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
  * Kerning forms of every letter in equal cells. The column width is measured from the
  * widest row of forms, so cells grow with the font size and never clip their text.
  */
-function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: string }) {
+function ConnectionsGrid({
+  style,
+  letter,
+  marks,
+}: {
+  style: CSSProperties;
+  letter: string;
+  /** Diacritic(s) put on every letter; empty for none. */
+  marks: string;
+}) {
   const grid = useRef<HTMLDivElement>(null);
   const [cellWidth, setCellWidth] = useState(0);
   useEffect(() => {
@@ -68,7 +82,7 @@ function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: stri
     const observer = new ResizeObserver(measure);
     element.querySelectorAll('.joining-forms').forEach((forms) => observer.observe(forms));
     return () => observer.disconnect();
-  }, [style, letter]);
+  }, [style, letter, marks]);
   return (
     <div
       ref={grid}
@@ -81,10 +95,10 @@ function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: stri
     >
       {persianAlphabet.map((char) => (
         <div className="glyph-cell joining-cell" key={char}>
-          {/* Keyed by the selected letter so each pick builds the row afresh. */}
-          <span className="joining-forms" style={style} key={letter}>
+          {/* Keyed by the selection so each pick builds the row afresh. */}
+          <span className="joining-forms" style={style} key={letter + marks}>
             {kerningForms(letter, char).map((form) => (
-              <span key={form}>{form}</span>
+              <span key={form}>{withMarks(form, marks)}</span>
             ))}
           </span>
         </div>
@@ -98,63 +112,6 @@ function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: stri
 function missingGlyph(font: LoadedFont, text: string): boolean | null {
   if (!font.parsed) return null;
   return Array.from(text).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0);
-}
-
-/** Diacritics test page: a grid per mark, stacked marks, then sample sentences. */
-function DiacriticsSheet({
-  font,
-  style,
-  lang,
-}: {
-  font: LoadedFont;
-  style: CSSProperties;
-  lang: 'fa' | 'ar';
-}) {
-  const group = diacriticGroups.find(({ id }) => id === lang)!;
-  return (
-    <div className="diacritics-sections" lang={lang}>
-      {!font.parsed && <p className="text-muted">{font.inspectionWarning}</p>}
-      {group.sections.map((section) => (
-        <section key={section.id} className="diacritics-section">
-          <h3 className="diacritics-section-title">{section.title}</h3>
-          {section.layout === 'grid' ? (
-            <div className="char-grid" style={{ fontSize: style.fontSize }}>
-              {section.items.map(({ text, label }) => {
-                const missing = missingGlyph(font, text);
-                return (
-                  <div
-                    className={`char-cell ${missing ? 'char-cell-missing' : ''}`}
-                    key={text}
-                    title={`${missing ? 'پشتیبانی نمی‌شود — ' : ''}${label} — ${codePoints(text)}`}
-                  >
-                    <span className="char-glyph" style={style}>
-                      {text}
-                    </span>
-                    {/* Same text in the UI font, to compare mark placement against. */}
-                    <span className="char-label">{text}</span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="diacritics-blocks">
-              {section.items.map(({ text, label }) => (
-                <article
-                  key={text}
-                  className={`diacritics-block ${missingGlyph(font, text) ? 'diacritics-block-missing' : ''}`}
-                >
-                  <header className="char-label">{label}</header>
-                  <p className="diacritics-block-text" style={style}>
-                    {text}
-                  </p>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      ))}
-    </div>
-  );
 }
 
 function weightsLayerAlpha(count: number): number {
@@ -291,7 +248,7 @@ export function TestViews({
   const setSpeed = (value: number) =>
     dispatch({ type: 'set-typing', tab: tabId, patch: { speed: value } });
   const [letter, setLetter] = useState('ب');
-  const [diacriticLang, setDiacriticLang] = useState<'fa' | 'ar'>('fa');
+  const [marks, setMarks] = useState('');
   const [qaFilter, setQaFilter] = useState<QaFilter>('all');
   const liveInput = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const [keyboard, setKeyboard] = useState<KeyboardId | null>(null);
@@ -483,6 +440,35 @@ export function TestViews({
               </Button>
             ))}
           </div>
+          <div className="kerning-marks" role="group" aria-label="اعراب">
+            <Button
+              className="joining-letter"
+              aria-pressed={marks === ''}
+              disabled={disabled}
+              onClick={() => setMarks('')}
+            >
+              بدون اعراب
+            </Button>
+            {kerningMarkGroups.map((group) => (
+              <div className="kerning-mark-group" key={group.id} role="group" aria-label={group.title}>
+                <span className="kerning-mark-title">{group.title}</span>
+                {group.marks.map((mark) => (
+                  <Button
+                    key={mark.id}
+                    className="joining-letter kerning-mark"
+                    aria-pressed={marks === mark.marks}
+                    aria-label={mark.name}
+                    data-tooltip={mark.name}
+                    disabled={disabled}
+                    onClick={() => setMarks(mark.marks)}
+                  >
+                    {/* Dotted circle: the usual stand-in base for showing a lone mark. */}
+                    {'◌' + mark.marks}
+                  </Button>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {tabId === 'paragraph' && (
@@ -517,23 +503,6 @@ export function TestViews({
       {tabId === 'qa-report' && fonts[0] && (
         <QaToolbar font={fonts[0]} allFonts={allFonts} filter={qaFilter} onFilter={setQaFilter} />
       )}
-      {tabId === 'diacritics' && (
-        <div className="toolbar panel">
-          <div className="joining-letters" role="group" aria-label="زبان اعراب">
-            {diacriticGroups.map((group) => (
-              <Button
-                key={group.id}
-                className="joining-letter"
-                aria-pressed={diacriticLang === group.id}
-                disabled={disabled}
-                onClick={() => setDiacriticLang(group.id)}
-              >
-                {group.title}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
       {disabled && (
         <div className="panel p-12 text-center text-muted">
           همه فونت‌های این تب غیرفعال‌اند. یک فونت را از نوار کناری فعال کنید.
@@ -551,7 +520,7 @@ export function TestViews({
               className={
                 // A single-font tab shows its one font bare: no card, no name heading.
                 isSingleFont(tabId)
-                  ? `preview-bare ${tabId === 'diacritics' ? 'diacritics-sheet' : ''} ${tabId === 'glyphs' ? 'glyphs-sheet' : ''} ${tabId === 'qa-report' ? 'qa-sheet' : ''}`
+                  ? `preview-bare ${tabId === 'glyphs' ? 'glyphs-sheet' : ''} ${tabId === 'qa-report' ? 'qa-sheet' : ''}`
                   : `preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`
               }
               key={font.id}
@@ -632,7 +601,7 @@ export function TestViews({
                   {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
                 </>
               )}
-              {tabId === 'connections' && <ConnectionsGrid style={style} letter={letter} />}
+              {tabId === 'connections' && <ConnectionsGrid style={style} letter={letter} marks={marks} />}
               {tabId === 'zwnj' && (
                 <table className="data-table zwnj-table">
                   <thead>
@@ -657,9 +626,6 @@ export function TestViews({
                     ))}
                   </tbody>
                 </table>
-              )}
-              {tabId === 'diacritics' && (
-                <DiacriticsSheet font={font} style={style} lang={diacriticLang} />
               )}
               {tabId === 'glyphs' && <Glyphs font={font} axes={tab.controls.axes} />}
               {tabId === 'qa-report' && (

@@ -194,6 +194,7 @@ function WeightsOverlay({
           id="weights-input"
           type="text"
           className="text-input"
+          spellCheck={false}
           dir="rtl"
           maxLength={WEIGHTS_TEXT_MAX}
           value={tab.text}
@@ -394,6 +395,7 @@ export function TestViews({
             <input
               type="text"
               className="text-input"
+              spellCheck={false}
               value={tab.text}
               onChange={(e) => {
                 setPlaying(false);
@@ -452,6 +454,7 @@ export function TestViews({
               ref={liveInput}
               type="text"
               className="text-input"
+              spellCheck={false}
               value={tab.text}
               disabled={disabled}
               onChange={(e) =>
@@ -487,6 +490,9 @@ export function TestViews({
               ref={liveInput}
               aria-label="متن پاراگراف"
               className="paragraph-input"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               style={previewStyle(fonts[0], tab)}
               value={tab.text}
               disabled={disabled}
@@ -642,7 +648,7 @@ export function TestViews({
               {tabId === 'diacritics' && (
                 <DiacriticsSheet font={font} style={style} lang={diacriticLang} />
               )}
-              {tabId === 'glyphs' && <Glyphs font={font} />}
+              {tabId === 'glyphs' && <Glyphs font={font} axes={tab.controls.axes} />}
               {tabId === 'qa-report' && (
                 <QaReport font={font} allFonts={allFonts} filter={qaFilter} />
               )}

@@ -37,9 +37,10 @@ export const tabDefinitions = [
   { id: 'characters', title: 'کاراکترها', controls: ['axes'], singleFont: true },
   { id: 'connections', title: 'اتصالات', controls: ['axes'], singleFont: true },
   { id: 'zwnj', title: 'نیم‌فاصله', controls: ['axes'], singleFont: true },
-  // Glyph outlines, metadata and the QA report read the font file itself, so CSS
-  // axis values have nothing to change there; they keep no settings section.
-  { id: 'glyphs', title: 'لیست گلیف‌ها', controls: [], singleFont: true },
+  // Glyph outlines are drawn from the font file at the shared axis values.
+  { id: 'glyphs', title: 'لیست گلیف‌ها', controls: ['axes'], singleFont: true },
+  // Metadata and the QA report read the font file itself, so axis values have
+  // nothing to change there; they keep no settings section.
   { id: 'metadata', title: 'متادیتا', controls: [] },
   { id: 'qa-report', title: 'گزارش QA', controls: [], singleFont: true },
 ] as const satisfies readonly {

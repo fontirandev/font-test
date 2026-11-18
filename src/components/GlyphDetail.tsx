@@ -224,12 +224,15 @@ function Preview({ font, glyph, layers }: { font: Font; glyph: Glyph; layers: Se
 
 export function GlyphDetail({
   font,
+  glyphAt,
   index,
   order,
   onSelect,
   onClose,
 }: {
   font: Font;
+  /** The glyph for an id, drawn at the current axis values. */
+  glyphAt: (index: number) => Glyph;
   /** Glyph id being shown. */
   index: number;
   /** Glyph ids in the order the list shows them, for previous / next. */
@@ -237,7 +240,7 @@ export function GlyphDetail({
   onSelect: (index: number) => void;
   onClose: () => void;
 }) {
-  const glyph = font.glyphs.get(index);
+  const glyph = glyphAt(index);
   const [layers, setLayers] = useState<Set<Layer>>(() => new Set(['fill', 'points', 'metrics']));
   const [copied, setCopied] = useState<string | null>(null);
   const position = order.indexOf(index);

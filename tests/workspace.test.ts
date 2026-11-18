@@ -137,7 +137,8 @@ test('irrelevant controls are rejected at the tab boundary', () => {
   assert.equal(state.tabs.metadata.controls.fontSize, initial.tabs.metadata.controls.fontSize);
   assert.equal(supportsControl('metadata', 'features'), false);
   assert.equal(supportsControl('glyphs', 'features'), false);
-  assert.equal(supportsControl('glyphs', 'axes'), false);
+  assert.equal(supportsControl('glyphs', 'axes'), true);
+  assert.equal(supportsControl('metadata', 'axes'), false);
 });
 test('variable axes are one value shared by every tab that offers them', () => {
   const state = workspaceReducer(setup(), {

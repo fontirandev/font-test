@@ -26,6 +26,8 @@ export interface LoadedFont extends FontIdentity {
   /** Designer-given names for stylistic sets (ssXX), from GSUB FeatureParams + name table. */
   featureNames: Record<string, string>;
   axes: VariationAxis[];
+  /** Uncompressed font bytes, kept only for variable fonts so outlines can be varied. */
+  sfnt: ArrayBuffer | null;
   inspectionWarning: string | null;
 }
 
@@ -154,8 +156,9 @@ export async function loadFont(file: File, id = createId()): Promise<LoadedFont>
   const bytes = await file.arrayBuffer();
   let parsed: Font | null = null;
   let featureNames: Record<string, string> = {};
+  let sfnt: ArrayBuffer | null = null;
   try {
-    const sfnt = await toSfnt(bytes);
+    sfnt = await toSfnt(bytes);
     parsed = opentype.parse(sfnt);
     featureNames = await readFeatureNames(sfnt, parsed).catch(() => ({}));
   } catch {
@@ -190,6 +193,7 @@ export async function loadFont(file: File, id = createId()): Promise<LoadedFont>
     weight,
     sortWeight,
     axes,
+    sfnt: axes.length > 0 ? sfnt : null,
     fileName: file.name,
     size: file.size,
     name:

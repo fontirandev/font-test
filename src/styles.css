@@ -817,7 +817,9 @@
     background: var(--panel);
     color: var(--ink);
     line-height: 1.8;
-    resize: vertical;
+    /* Height follows the text (set from TestViews), so the field never scrolls itself. */
+    overflow: hidden;
+    resize: none;
   }
   /* Keyboard toggles in the live typing and paragraph tabs. */
   .insert-keys {
@@ -835,6 +837,12 @@
     min-width: 32px;
     padding: 2px 6px;
     font-size: 16px;
+  }
+  /* Glyph tab view switch: a bit larger than the letter buttons, as tall as the search box. */
+  .glyph-view-toggle {
+    min-width: 130px;
+    min-height: 36px;
+    padding: 4px 14px;
   }
   /* On-screen keyboard (Arabic / Persian / Kurdish) under the live typing input. */
   .osk {
@@ -1540,11 +1548,17 @@
     /* 20% more than the shared .glyph-cell padding (12px 6px). */
     padding: 14.4px 7.2px;
     background: var(--panel);
+    /* content-visibility: auto clips paint to the cell, cutting off tall marks. */
+    content-visibility: visible;
   }
   .joining-forms {
     display: inline-flex;
     gap: 0.4em;
     white-space: nowrap;
+  }
+  /* Diacritics rise above the font's ascent; extra leading keeps them inside the cell. */
+  .joining-forms-marked {
+    line-height: 2.4;
   }
   .status-message {
     border: 1px solid var(--border-control);

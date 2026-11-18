@@ -53,10 +53,22 @@ export const tabDefinitions = [
   // variable axes (shared by every tab) can be changed there.
   // { id: 'diacritics', title: 'اعراب', controls: ['axes'], singleFont: true },
   { id: 'characters', title: 'اعداد و علائم', controls: ['axes'], singleFont: true },
-  { id: 'connections', title: 'کرنینگ', controls: ['axes'], singleFont: true },
+  // Kerning is checked at different sizes, in outline and with features (e.g. kern) toggled.
+  {
+    id: 'connections',
+    title: 'کرنینگ',
+    controls: ['display', 'fontSize', 'features', 'axes'],
+    singleFont: true,
+  },
   { id: 'zwnj', title: 'نیم‌فاصله', controls: ['axes'], singleFont: true },
-  // Glyph outlines are drawn from the font file at the shared axis values.
-  { id: 'glyphs', title: 'لیست گلیف‌ها', controls: ['axes'], singleFont: true },
+  // Glyph outlines are drawn from the font file at the shared axis values. Font size
+  // and display apply to the row view only; the sidebar hides them in the grid view.
+  {
+    id: 'glyphs',
+    title: 'لیست گلیف‌ها',
+    controls: ['display', 'fontSize', 'axes'],
+    singleFont: true,
+  },
   // Metadata and the QA report read the font file itself, so axis values have
   // nothing to change there; they keep no settings section.
   { id: 'metadata', title: 'متادیتا', controls: [] },

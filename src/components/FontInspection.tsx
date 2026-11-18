@@ -2,23 +2,18 @@ import { memo, useDeferredValue, useMemo, useState } from 'react';
 import type { Glyph } from 'opentype.js';
 import type { LoadedFont } from '../lib/fonts';
 import { useGlyphSource } from '../lib/variation';
+import { setGlyphView, useGlyphView, type GlyphView } from '../lib/glyph-view';
+import type { PreviewSettings } from '../../shared/settings';
 import { GlyphDetail } from './GlyphDetail';
 import { Button } from './ui';
 
-/** Drawing height of each glyph, in px; the same for every glyph and every font. */
+/** Grid view: drawing height of each glyph, in px; the same for every glyph and every font. */
 const glyphHeight = 48;
 
-/** grid: a labelled cell per glyph; row: the glyphs set side by side in one box. */
-const glyphViews = [
-  { id: 'grid', label: 'جدول' },
+const glyphViews: { id: GlyphView; label: string }[] = [
   { id: 'row', label: 'ردیف' },
-] as const;
-type GlyphView = (typeof glyphViews)[number]['id'];
-/**
- * The open view outlives the tab (switching tabs unmounts the list) but not a
- * reload, so it is kept in memory rather than in browser storage.
- */
-let lastGlyphView: GlyphView = 'grid';
+  { id: 'grid', label: 'جدول' },
+];
 
 interface GlyphItemProps {
   index: number;
@@ -30,6 +25,12 @@ interface GlyphItemProps {
   onSelect: (index: number) => void;
 }
 
+interface GlyphRowItemProps extends GlyphItemProps {
+  /** Drawn height of the shared frame, in px. */
+  height: number;
+  outline: boolean;
+}
+
 // Each glyph is its own memoized component so a deferred redraw can yield between
 // glyphs and be dropped when the axes change again.
 const GlyphRowItem = memo(function GlyphRowItem({
@@ -39,7 +40,9 @@ const GlyphRowItem = memo(function GlyphRowItem({
   top,
   unitsPerEm,
   onSelect,
-}: GlyphItemProps) {
+  height,
+  outline,
+}: GlyphRowItemProps) {
   const g = glyphAt(index);
   const box = g.getBoundingBox();
   // Each glyph takes its advance width; zero-width marks take their ink width.
@@ -53,12 +56,19 @@ const GlyphRowItem = memo(function GlyphRowItem({
       onClick={() => onSelect(index)}
     >
       <svg
-        width={(width / frame) * glyphHeight}
-        height={glyphHeight}
+        width={(width / frame) * height}
+        height={height}
         viewBox={`${left} ${top} ${width} ${frame}`}
         aria-hidden="true"
       >
-        <path d={g.getPath(0, 0, unitsPerEm).toPathData(2)} fill="currentColor" />
+        {/* Outline matches the text tabs: a half-tone fill under a 1px contour. */}
+        <path
+          d={g.getPath(0, 0, unitsPerEm).toPathData(2)}
+          fill={outline ? 'color-mix(in srgb, currentColor 50%, transparent)' : 'currentColor'}
+          stroke={outline ? 'currentColor' : undefined}
+          strokeWidth={outline ? 1 : undefined}
+          vectorEffect={outline ? 'non-scaling-stroke' : undefined}
+        />
       </svg>
     </button>
   );
@@ -96,17 +106,23 @@ const GlyphGridCell = memo(function GlyphGridCell({
   );
 });
 
-export function Glyphs({ font, axes }: { font: LoadedFont; axes: Record<string, number> }) {
+export function Glyphs({
+  font,
+  controls,
+}: {
+  font: LoadedFont;
+  /** Axes apply to both views; font size and display to the row view only. */
+  controls: Pick<PreviewSettings, 'axes' | 'fontSize' | 'display'>;
+}) {
+  const { axes } = controls;
   // Redrawing every glyph is slow, so axis changes render at low priority: the
   // slider stays responsive and values passed over while dragging are skipped.
   const glyphAt = useGlyphSource(font, useDeferredValue(axes));
+  // Font size likewise: the row redraws once the slider settles or a preset is picked.
+  const fontSize = useDeferredValue(controls.fontSize);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
-  const [view, setViewState] = useState<GlyphView>(lastGlyphView);
-  const setView = (next: GlyphView) => {
-    lastGlyphView = next;
-    setViewState(next);
-  };
+  const view = useGlyphView();
   const parsed = font.parsed;
   const matches = useMemo(() => {
     if (!parsed) return [];
@@ -133,6 +149,8 @@ export function Glyphs({ font, axes }: { font: LoadedFont; axes: Record<string, 
   const descender = parsed.descender || -parsed.unitsPerEm * 0.2;
   const pad = (ascender - descender) * 0.1;
   const frame = ascender - descender + pad * 2;
+  // In the row view one em is the chosen font size (pt → px), like the text tabs.
+  const rowHeight = ((fontSize * 4) / 3) * (frame / parsed.unitsPerEm);
   return (
     <div>
       <div className="flex items-center gap-3 border-b border-line p-3">
@@ -140,9 +158,9 @@ export function Glyphs({ font, axes }: { font: LoadedFont; axes: Record<string, 
           {glyphViews.map(({ id, label }) => (
             <Button
               key={id}
-              className="joining-letter"
+              className="joining-letter glyph-view-toggle"
               aria-pressed={view === id}
-              onClick={() => setView(id)}
+              onClick={() => setGlyphView(id)}
             >
               {label}
             </Button>
@@ -170,6 +188,8 @@ export function Glyphs({ font, axes }: { font: LoadedFont; axes: Record<string, 
               top={-ascender - pad}
               unitsPerEm={parsed.unitsPerEm}
               onSelect={setSelected}
+              height={rowHeight}
+              outline={controls.display === 'outline'}
             />
           ))}
         </div>

@@ -3,6 +3,7 @@ import type { PreviewSettings } from '../../shared/settings';
 import type { TabSession } from '../state/workspace';
 import type { LoadedFont } from '../lib/fonts';
 import { Button, IconButton, Slider, Toggle } from './ui';
+import { useGlyphView } from '../lib/glyph-view';
 
 const displayModes: { id: PreviewSettings['display']; label: string }[] = [
   { id: 'solid', label: 'Solid' },
@@ -158,7 +159,11 @@ export function PreviewControls({
   );
   const uniqueAxes = [...new Map(axes.map((axis) => [axis.tag, axis])).values()];
   const c = tab.controls;
-  const permitted = (key: keyof PreviewSettings) => supportsControl(tabId, key);
+  const glyphView = useGlyphView();
+  const permitted = (key: keyof PreviewSettings) =>
+    supportsControl(tabId, key) &&
+    // The glyph grid draws every glyph at one fixed size; only the row view takes these.
+    !(tabId === 'glyphs' && glyphView === 'grid' && (key === 'fontSize' || key === 'display'));
   return (
     <div dir="ltr">
       {permitted('display') && (

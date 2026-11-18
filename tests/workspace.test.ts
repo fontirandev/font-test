@@ -172,9 +172,14 @@ test('variable axes are one value shared by every tab that offers them', () => {
 });
 test('reference sheets only offer the shared axes and keep the 32pt default', () => {
   const workspace = createWorkspace(createFactoryDefaults());
-  for (const tab of ['characters', 'connections', 'zwnj'] as const) {
+  for (const tab of ['characters', 'zwnj'] as const) {
     assert.equal(supportsControl(tab, 'fontSize'), false, tab);
     assert.equal(workspace.tabs[tab].controls.fontSize, 32, tab);
+  }
+});
+test('the kerning tab offers size, display, features and axes', () => {
+  for (const control of ['display', 'fontSize', 'features', 'axes'] as const) {
+    assert.equal(supportsControl('connections', control), true, control);
   }
 });
 test('old saved defaults with per-tab sort and retired controls are migrated', () => {

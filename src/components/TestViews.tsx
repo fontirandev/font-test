@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
 import {
@@ -96,7 +96,11 @@ function ConnectionsGrid({
       {persianAlphabet.map((char) => (
         <div className="glyph-cell joining-cell" key={char}>
           {/* Keyed by the selection so each pick builds the row afresh. */}
-          <span className="joining-forms" style={style} key={letter + marks}>
+          <span
+            className={marks ? 'joining-forms joining-forms-marked' : 'joining-forms'}
+            style={style}
+            key={letter + marks}
+          >
             {kerningForms(letter, char).map((form) => (
               <span key={form}>{withMarks(form, marks)}</span>
             ))}
@@ -310,6 +314,35 @@ export function TestViews({
     dispatch({ type: 'set-typing', tab: tabId, patch: { position: 0 } });
     setPlaying(true);
   }, [fontKey, tabId, dispatch]);
+  // The paragraph textarea grows with its text so only the page scrolls, never the field.
+  const paragraphFont = tabId === 'paragraph' ? fonts[0] : undefined;
+  useLayoutEffect(() => {
+    const el = liveInput.current;
+    if (!paragraphFont || !(el instanceof HTMLTextAreaElement)) return;
+    const fit = () => {
+      // Collapsing to 'auto' to measure shrinks the page; keep the scroll position put.
+      const scroller = el.closest('.content-area');
+      const scrollTop = scroller?.scrollTop ?? 0;
+      el.style.height = 'auto';
+      // scrollHeight excludes borders; add them back so no inner scrollbar appears.
+      const border = el.offsetHeight - el.clientHeight;
+      el.style.height = `${el.scrollHeight + border}px`;
+      // Growing can bring in the page scrollbar, narrowing the field and wrapping more lines.
+      if (el.scrollHeight > el.clientHeight) el.style.height = `${el.scrollHeight + border}px`;
+      if (scroller) scroller.scrollTop = scrollTop;
+    };
+    fit();
+    // Re-fit when the width changes (window resize, sidebar toggle) or the webfont finishes loading.
+    let width = el.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      fit();
+    });
+    observer.observe(el);
+    document.fonts?.ready.then(fit);
+    return () => observer.disconnect();
+  }, [paragraphFont, tab.text, tab.controls]);
   const disabled = fonts.length === 0;
   // Keyboard toggles and the open keyboard, shared by the live typing and paragraph tabs.
   const keyboardBar = (
@@ -627,7 +660,7 @@ export function TestViews({
                   </tbody>
                 </table>
               )}
-              {tabId === 'glyphs' && <Glyphs font={font} axes={tab.controls.axes} />}
+              {tabId === 'glyphs' && <Glyphs font={font} controls={tab.controls} />}
               {tabId === 'qa-report' && (
                 <QaReport font={font} allFonts={allFonts} filter={qaFilter} />
               )}

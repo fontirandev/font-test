@@ -1,4 +1,47 @@
 export const persianAlphabet = Array.from('اآبپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی');
+
+/** Letters that never join the letter after them (they have no initial or medial form). */
+const rightJoiningOnly = new Set(Array.from('اآأإدذرزژوؤء'));
+const joinsNext = (ch: string) => !rightJoiningOnly.has(ch);
+/** Kashida: a neutral joiner for when neither letter can join the one after it. */
+const tatweel = '\u0640';
+
+/**
+ * Every way `letter` and `other` can meet, for checking kerning: `letter` alone,
+ * then each order of the two (letter–other, other–letter) with the first one at a
+ * word start or mid-word, and the second at a word end or mid-word. Fillers come
+ * from the two letters themselves where they can join, so with ج and ب this is
+ * ج جب بجب جبج بجبج جبجب بج.
+ */
+export function kerningForms(letter: string, other: string): string[] {
+  const contexts = (first: string, second: string) => {
+    // A joiner before `first` puts it mid-word (or in its final form if it never joins on).
+    const before = joinsNext(second) ? second : joinsNext(first) ? first : tatweel;
+    // Something after `second` only changes its shape if `second` joins on.
+    const after = joinsNext(second) ? first : null;
+    return {
+      plain: first + second,
+      before: before + first + second,
+      after: after === null ? null : first + second + after,
+      both: after === null ? null : before + first + second + after,
+    };
+  };
+  const forward = contexts(letter, other);
+  const backward = contexts(other, letter);
+  const forms = [
+    letter,
+    forward.plain,
+    forward.before,
+    forward.after,
+    forward.both,
+    backward.both,
+    backward.before,
+    backward.after,
+    backward.plain,
+  ];
+  // Contexts of one order often double as the other's (بجب is both); keep each once.
+  return [...new Set(forms.filter((form): form is string => form !== null))];
+}
 /** One diacritics test page: grids of letter + mark cells, then sample text blocks. */
 export interface DiacriticSection {
   id: string;

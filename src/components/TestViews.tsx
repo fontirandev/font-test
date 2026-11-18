@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
-import { diacriticGroups, persianAlphabet } from '../lib/samples';
+import { diacriticGroups, kerningForms, persianAlphabet } from '../lib/samples';
 import {
   languageSheets,
   parseCharacters,
@@ -18,6 +18,8 @@ import {
 import { Button, Icon, IconButton } from './ui';
 import { Glyphs, Metadata } from './FontInspection';
 import { OnScreenKeyboard } from './OnScreenKeyboard';
+import { TextLayoutBar } from './PreviewControls';
+import type { PreviewSettings } from '../../shared/settings';
 import { keyboardLayouts, type KeyboardId } from '../lib/keyboards';
 
 function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
@@ -37,9 +39,8 @@ function previewStyle(font: LoadedFont, tab: TabSession): CSSProperties {
   };
 }
 
-/** Width that fits four joining forms of one letter at the tab's font size (pt → px). */
 /**
- * Joining forms of every letter in equal cells. The column width is measured from the
+ * Kerning forms of every letter in equal cells. The column width is measured from the
  * widest row of forms, so cells grow with the font size and never clip their text.
  */
 function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: string }) {
@@ -80,12 +81,11 @@ function ConnectionsGrid({ style, letter }: { style: CSSProperties; letter: stri
     >
       {persianAlphabet.map((char) => (
         <div className="glyph-cell joining-cell" key={char}>
-          <span className="joining-forms" style={style}>
-            {[char, `${char}${letter}`, `${letter}${char}${letter}`, `${letter}${char}`].map(
-              (form) => (
-                <span key={form}>{form}</span>
-              ),
-            )}
+          {/* Keyed by the selected letter so each pick builds the row afresh. */}
+          <span className="joining-forms" style={style} key={letter}>
+            {kerningForms(letter, char).map((form) => (
+              <span key={form}>{form}</span>
+            ))}
           </span>
         </div>
       ))}
@@ -270,9 +270,12 @@ export function TestViews({
   fonts,
   allFonts,
   texts,
+  tabDefaults,
   dispatch,
 }: {
   tabId: TabId;
+  /** Saved default settings of this tab. */
+  tabDefaults: PreviewSettings;
   /** Saved default content of the languages, characters and ZWNJ tabs. */
   texts: DefaultTexts;
   tab: TabSession;
@@ -484,6 +487,12 @@ export function TestViews({
       )}
       {tabId === 'paragraph' && (
         <div className="text-field panel mb-1">
+          <TextLayoutBar
+            controls={tab.controls}
+            defaults={tabDefaults}
+            disabled={disabled}
+            onChange={(patch) => dispatch({ type: 'set-controls', tab: tabId, patch })}
+          />
           {keyboardBar}
           {fonts[0] && (
             <textarea
@@ -493,7 +502,11 @@ export function TestViews({
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
-              style={previewStyle(fonts[0], tab)}
+              style={{
+                ...previewStyle(fonts[0], tab),
+                lineHeight: tab.controls.lineHeight,
+                letterSpacing: `${tab.controls.letterSpacing}px`,
+              }}
               value={tab.text}
               disabled={disabled}
               onChange={(e) => dispatch({ type: 'set-text', tab: tabId, text: e.target.value })}

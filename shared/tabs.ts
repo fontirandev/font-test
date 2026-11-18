@@ -1,6 +1,14 @@
 /** Capability declarations are the single source of truth for visible controls. */
 export type ControlId =
-  'display' | 'fontSize' | 'direction' | 'alignment' | 'features' | 'axes' | 'showMissing';
+  | 'display'
+  | 'fontSize'
+  | 'direction'
+  | 'alignment'
+  | 'lineHeight'
+  | 'letterSpacing'
+  | 'features'
+  | 'axes'
+  | 'showMissing';
 
 export const tabDefinitions = [
   {
@@ -17,7 +25,17 @@ export const tabDefinitions = [
     // A free-form textarea set in the one active font.
     id: 'paragraph',
     title: 'پاراگراف',
-    controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
+    // Line height, letter spacing and alignment sit above the text box, not in the sidebar.
+    controls: [
+      'display',
+      'fontSize',
+      'direction',
+      'alignment',
+      'lineHeight',
+      'letterSpacing',
+      'features',
+      'axes',
+    ],
     singleFont: true,
   },
   {
@@ -35,7 +53,7 @@ export const tabDefinitions = [
   // variable axes (shared by every tab) can be changed there.
   { id: 'diacritics', title: 'اعراب', controls: ['axes'], singleFont: true },
   { id: 'characters', title: 'کاراکترها', controls: ['axes'], singleFont: true },
-  { id: 'connections', title: 'اتصالات', controls: ['axes'], singleFont: true },
+  { id: 'connections', title: 'کرنینگ', controls: ['axes'], singleFont: true },
   { id: 'zwnj', title: 'نیم‌فاصله', controls: ['axes'], singleFont: true },
   // Glyph outlines are drawn from the font file at the shared axis values.
   { id: 'glyphs', title: 'لیست گلیف‌ها', controls: ['axes'], singleFont: true },

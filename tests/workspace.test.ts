@@ -182,14 +182,18 @@ test('old saved defaults with per-tab sort and retired controls are migrated', (
   delete legacy.sort;
   for (const tab of Object.values(legacy.tabs) as Record<string, any>[]) {
     tab.sort = 'manual';
-    tab.controls.lineHeight = 1.8;
-    tab.controls.letterSpacing = 0;
+    tab.controls.lineHeight = 3;
+    tab.controls.letterSpacing = 5;
   }
   legacy.tabs['typing-test'].sort = 'weight-desc';
   const migrated = normalizeDefaults(legacy);
   assert.equal(migrated.sort, 'weight-desc');
   assert.equal('sort' in migrated.tabs.weights, false);
-  assert.equal('lineHeight' in migrated.tabs.weights.controls, false);
+  // Line height and letter spacing are back, for the paragraph tab only.
+  assert.equal(migrated.tabs.paragraph.controls.lineHeight, 3);
+  assert.equal(migrated.tabs.paragraph.controls.letterSpacing, 5);
+  assert.equal(migrated.tabs.weights.controls.lineHeight, 1.8);
+  assert.equal(migrated.tabs.weights.controls.letterSpacing, 0);
   assert.equal(createWorkspace(migrated).sort, 'weight-desc');
 });
 test('defaults reject session data and invalid numeric controls', () => {

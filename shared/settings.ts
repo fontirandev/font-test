@@ -9,6 +9,10 @@ export const controlsSchema = z.strictObject({
   fontSize: z.number().min(8).max(300).default(48),
   direction: z.enum(['rtl', 'ltr']).default('rtl'),
   alignment: z.enum(['start', 'center', 'end', 'justify']).default('start'),
+  /** Unitless multiple of the font size. */
+  lineHeight: z.number().min(0.8).max(4).default(1.8),
+  /** In px. */
+  letterSpacing: z.number().min(-10).max(30).default(0),
   features: z.record(tag, z.boolean()).default({}),
   axes: z.record(tag, z.number().finite()).default({}),
   showMissing: z.boolean().default(true),
@@ -54,7 +58,7 @@ export function createFactoryDefaults(): AppDefaults {
 
 /** Do not persist controls that have no effect on a tab. */
 /** Controls that were removed; stripped from stored payloads so old data still parses. */
-const retiredControls = ['lineHeight', 'letterSpacing', 'onlyIssues'];
+const retiredControls = ['onlyIssues'];
 
 /**
  * Upgrade payloads saved by older versions: drop retired controls, and lift the

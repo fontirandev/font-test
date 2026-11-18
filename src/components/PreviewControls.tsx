@@ -2,7 +2,7 @@ import { supportsControl, type TabId } from '../../shared/tabs';
 import type { PreviewSettings } from '../../shared/settings';
 import type { TabSession } from '../state/workspace';
 import type { LoadedFont } from '../lib/fonts';
-import { Button, Slider, Toggle } from './ui';
+import { Button, IconButton, Slider, Toggle } from './ui';
 
 const displayModes: { id: PreviewSettings['display']; label: string }[] = [
   { id: 'solid', label: 'Solid' },
@@ -51,6 +51,88 @@ export function featureLabel(tag: string, names: Record<string, string> = {}): s
   if (isStylisticSet(tag)) return `Stylistic set ${Number(tag.slice(2))}`;
   if (isCharacterVariant(tag)) return `Character variant ${Number(tag.slice(2))}`;
   return featureLabels[tag] ?? tag;
+}
+
+/** Logical alignments: with right-to-left text, Start is the right edge. */
+const alignments: { id: PreviewSettings['alignment']; label: string }[] = [
+  { id: 'start', label: 'Start' },
+  { id: 'center', label: 'Center' },
+  { id: 'end', label: 'End' },
+  { id: 'justify', label: 'Justify' },
+];
+
+/**
+ * Line height, letter spacing and alignment. Only the paragraph tab offers them,
+ * and it shows them above its text box rather than in the sidebar.
+ */
+export function TextLayoutBar({
+  controls: c,
+  defaults,
+  onChange,
+  disabled = false,
+}: {
+  controls: PreviewSettings;
+  /** The tab's saved defaults; the reset button restores these three from them. */
+  defaults: PreviewSettings;
+  onChange: (patch: Partial<PreviewSettings>) => void;
+  disabled?: boolean;
+}) {
+  const initial = {
+    lineHeight: defaults.lineHeight,
+    letterSpacing: defaults.letterSpacing,
+    alignment: defaults.alignment,
+  };
+  const atDefaults = (Object.keys(initial) as (keyof typeof initial)[]).every(
+    (key) => c[key] === initial[key],
+  );
+  return (
+    <div className="text-layout-bar" dir="ltr">
+      <Slider
+        label="Line height"
+        min={0.8}
+        max={4}
+        step={0.05}
+        value={c.lineHeight}
+        disabled={disabled}
+        onChange={(lineHeight) => onChange({ lineHeight })}
+      />
+      <Slider
+        label="Letter spacing"
+        min={-10}
+        max={30}
+        step={0.1}
+        unit="px"
+        value={c.letterSpacing}
+        disabled={disabled}
+        onChange={(letterSpacing) => onChange({ letterSpacing })}
+      />
+      <div>
+        <div className="control-label" id="alignment-label">
+          Text alignment
+        </div>
+        <div className="alignment-modes" role="group" aria-labelledby="alignment-label">
+          {alignments.map(({ id, label }) => (
+            <Button
+              key={id}
+              className="alignment-mode"
+              aria-pressed={c.alignment === id}
+              disabled={disabled}
+              onClick={() => onChange({ alignment: id })}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <IconButton
+        icon="reset"
+        label="بازنشانی ارتفاع خط، فاصلهٔ حروف و چینش"
+        className="text-layout-reset"
+        disabled={disabled || atDefaults}
+        onClick={() => onChange(initial)}
+      />
+    </div>
+  );
 }
 
 export function PreviewControls({

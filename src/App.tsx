@@ -73,6 +73,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
   const [fonts, setFonts] = useState<LoadedFont[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [emptyDragging, setEmptyDragging] = useState(false);
   const [modal, setModal] = useState<'settings' | 'about' | null>(null);
   // A theme picked in this browser outlives reloads; saved defaults apply otherwise.
   const [theme, setTheme] = useState(() => readStoredTheme() ?? defaults.theme);
@@ -303,7 +304,24 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
               </div>
             )}
             {fonts.length === 0 ? (
-              <div className="panel empty-panel">
+              <div
+                className="panel empty-panel"
+                data-dragging={emptyDragging}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                  if (!emptyDragging) setEmptyDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setEmptyDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setEmptyDragging(false);
+                  if (!loading) void addFiles(Array.from(e.dataTransfer.files));
+                }}
+              >
+                <div className="empty-dropzone" aria-hidden="true" />
                 <Icon name="empty-fonts" className="empty-illustration" />
                 <div className="empty-message">
                   <span>یک یا چند فایل فونت</span>
@@ -316,6 +334,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
                   />
                   <span>را اضافه کنید</span>
                 </div>
+                <p className="empty-hint">یا فایل‌ها را اینجا بکشید</p>
               </div>
             ) : (
               <TestViews
@@ -325,6 +344,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
                 fonts={activeFonts}
                 allFonts={fonts}
                 texts={defaults.texts}
+                tabDefaults={defaults.tabs[tabId].controls}
                 dispatch={dispatch}
               />
             )}

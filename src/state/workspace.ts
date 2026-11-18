@@ -200,11 +200,8 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
       break;
     case 'reset-tab': {
       const defaults = getTabDefaults(action.defaults, action.tab);
-      next = {
-        ...tab,
-        controls: defaults.controls,
-        text: defaultText(action.tab, action.defaults),
-      };
+      // Settings only: the text typed into the tab is kept.
+      next = { ...tab, controls: defaults.controls };
       let tabs = applyShared(
         { ...state.tabs, [action.tab]: next },
         sharedDefaults(action.defaults),

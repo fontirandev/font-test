@@ -175,6 +175,15 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
     } else for (const font of added) unloadFont(font);
     importing.current = false;
   }
+  function clearFonts() {
+    for (const font of fontRef.current) {
+      unloadFont(font);
+      dispatch({ type: 'remove-font', id: font.id });
+      void removeStoredFontFile(font.id);
+    }
+    fontRef.current = [];
+    setFonts([]);
+  }
   function removeFont(id: string) {
     const font = fontRef.current.find((font) => font.id === id);
     if (font) unloadFont(font);
@@ -276,6 +285,8 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
               void addFiles(files);
             }}
             onRemove={removeFont}
+            onClear={clearFonts}
+            onReset={() => dispatch({ type: 'reset-tab', tab: tabId, defaults })}
             loading={loading}
             openFilePicker={openPicker}
           />

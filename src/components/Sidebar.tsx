@@ -18,6 +18,8 @@ export function Sidebar({
   dispatch,
   onFiles,
   onRemove,
+  onClear,
+  onReset,
   loading,
   openFilePicker,
 }: {
@@ -28,6 +30,10 @@ export function Sidebar({
   dispatch: Dispatch<WorkspaceAction>;
   onFiles: (files: File[]) => void;
   onRemove: (id: string) => void;
+  /** Removes every font from the workspace. */
+  onClear: () => void;
+  /** Restores the open tab's settings to the saved defaults. */
+  onReset: () => void;
   loading: boolean;
   openFilePicker: () => void;
 }) {
@@ -59,13 +65,22 @@ export function Sidebar({
       <div className="section-heading">
         <h2>فایل‌ها</h2>
         {fonts.length > 0 && (
-          <IconButton
-            icon="collapse"
-            label={filesOpen ? 'بستن فهرست فایل‌ها' : 'نمایش فهرست فایل‌ها'}
-            variant="ghost"
-            aria-expanded={filesOpen}
-            onClick={() => setFilesOpen(!filesOpen)}
-          />
+          <div className="section-actions">
+            <Button
+              className="section-action"
+              disabled={loading}
+              onClick={onClear}
+            >
+              پاک کردن
+            </Button>
+            <IconButton
+              icon="collapse"
+              label={filesOpen ? 'بستن فهرست فایل‌ها' : 'نمایش فهرست فایل‌ها'}
+              variant="ghost"
+              aria-expanded={filesOpen}
+              onClick={() => setFilesOpen(!filesOpen)}
+            />
+          </div>
         )}
       </div>
       <div className="collapsible" data-open={filesOpen} inert={!filesOpen}>
@@ -201,13 +216,23 @@ export function Sidebar({
         <div className="section-heading border-t border-line">
           <h2>تنظیمات</h2>
           {fonts.length > 0 && (
-            <IconButton
-              icon="collapse"
-              label={settingsOpen ? 'بستن تنظیمات تب' : 'نمایش تنظیمات تب'}
-              aria-expanded={settingsOpen}
-              variant="ghost"
-              onClick={() => setSettingsOpen(!settingsOpen)}
-            />
+            <div className="section-actions">
+              <Button
+                className="section-action"
+                title="بازگرداندن تنظیمات به پیش‌فرض"
+                disabled={loading}
+                onClick={onReset}
+              >
+                بازنشانی
+              </Button>
+              <IconButton
+                icon="collapse"
+                label={settingsOpen ? 'بستن تنظیمات تب' : 'نمایش تنظیمات تب'}
+                aria-expanded={settingsOpen}
+                variant="ghost"
+                onClick={() => setSettingsOpen(!settingsOpen)}
+              />
+            </div>
           )}
         </div>
       )}

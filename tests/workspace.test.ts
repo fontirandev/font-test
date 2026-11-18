@@ -77,6 +77,22 @@ test('font size and variable axes are shared by every tab that offers them', () 
   });
   assert.equal(state.tabs['typing-test'].controls.fontSize, 48);
 });
+test('resetting a tab restores its settings but keeps its text', () => {
+  let state = workspaceReducer(setup(), { type: 'set-text', tab: 'paragraph', text: 'متن من' });
+  state = workspaceReducer(state, {
+    type: 'set-controls',
+    tab: 'paragraph',
+    patch: { alignment: 'center', fontSize: 90 },
+  });
+  const defaults = createFactoryDefaults();
+  state = workspaceReducer(state, { type: 'reset-tab', tab: 'paragraph', defaults });
+  assert.equal(state.tabs.paragraph.text, 'متن من');
+  assert.deepEqual(
+    state.tabs.paragraph.controls,
+    workspaceReducer(setup(), { type: 'reset-tab', tab: 'paragraph', defaults }).tabs.paragraph
+      .controls,
+  );
+});
 test('font order and sort are shared by every tab and never mutate the font array', () => {
   let state = workspaceReducer(setup(), { type: 'set-sort', sort: 'weight-asc' });
   assert.deepEqual(

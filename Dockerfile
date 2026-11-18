@@ -1,11 +1,16 @@
-# syntax=docker/dockerfile:1
-
-ARG NODE_VERSION=24-bookworm-slim
+# No "# syntax=docker/dockerfile:1" line: that pulls the Dockerfile frontend from
+# Docker Hub, which some build hosts can't reach. BuildKit's built-in frontend
+# handles everything used here (including RUN --mount).
+#
+# The Node base image comes from ECR Public, AWS's mirror of Docker's official
+# images, for the same reason. Override with --build-arg NODE_IMAGE=node:24-bookworm-slim
+# (or set NODE_IMAGE for docker compose) to pull from Docker Hub instead.
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:24-bookworm-slim
 
 # ---------------------------------------------------------------------------
 # deps: install all dependencies once (tsx is needed at runtime, so keep dev deps)
 # ---------------------------------------------------------------------------
-FROM node:${NODE_VERSION} AS deps
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
@@ -33,7 +38,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # prod: serve the built dist/ with the Node server
 # ---------------------------------------------------------------------------
-FROM node:${NODE_VERSION} AS prod
+FROM ${NODE_IMAGE} AS prod
 WORKDIR /app
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

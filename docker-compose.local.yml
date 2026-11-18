@@ -5,6 +5,8 @@ services:
     build:
       context: .
       target: dev
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-public.ecr.aws/docker/library/node:24-bookworm-slim}
     image: font-desk:dev
     volumes:
       - .:/app

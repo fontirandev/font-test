@@ -483,7 +483,8 @@ export function TestViews({
                     aria-label={mark.name}
                     data-tooltip={mark.name}
                     disabled={disabled}
-                    onClick={() => setMarks(mark.marks)}
+                    // A second click on the selected mark turns it off again.
+                    onClick={() => setMarks(marks === mark.marks ? '' : mark.marks)}
                   >
                     {/* Dotted circle: the usual stand-in base for showing a lone mark. */}
                     {'◌' + mark.marks}

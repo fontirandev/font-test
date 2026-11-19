@@ -42,7 +42,7 @@ Open `http://localhost:8030`. Use `PORT=9000 make up-local` to pick another port
 
 ## Testing views
 
-Automatic typing with play/pause and speed control; live typing; variable/static weight specimens; character coverage and multilingual samples; Persian connections; half-space comparisons; diacritics and punctuation; paginated raw glyph outlines; metadata; and structural QA with local JSON export.
+Automatic typing with play/pause and speed control; variable/static weight specimens; character coverage and multilingual samples; Persian connections; difficult-word sheets; diacritics and punctuation; paginated raw glyph outlines; metadata; and structural QA with local JSON export.
 
 Feature and axis controls are discovered from selected fonts. Explicitly turning a feature off emits `0` rather than falling back to browser defaults. Axis values are clamped to each font's supported range. Metadata and raw glyph views do not display text-shaping controls.
 

@@ -357,7 +357,7 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
           onClose={() => setModal(null)}
           onSaved={(value) => {
             // Saving a default also updates the editable preview samples immediately.
-            for (const id of ['typing-test', 'live-typing', 'paragraph', 'weights'] as const) {
+            for (const id of ['typing-test', 'paragraph', 'weights'] as const) {
               dispatch({ type: 'set-text', tab: id, text: defaultText(id, value) });
             }
             setDefaults(value);

@@ -11,8 +11,8 @@ export const controlsSchema = z.strictObject({
   alignment: z.enum(['start', 'center', 'end', 'justify']).default('start'),
   /** Unitless multiple of the font size. */
   lineHeight: z.number().min(0.8).max(4).default(1.8),
-  /** In px. */
-  letterSpacing: z.number().min(-10).max(30).default(0),
+  /** Width of the paragraph text box in px, or the full content width. */
+  pageWidth: z.enum(['320', '480', '640', '960', '1200', 'full']).default('full'),
   features: z.record(tag, z.boolean()).default({}),
   axes: z.record(tag, z.number().finite()).default({}),
   showMissing: z.boolean().default(true),
@@ -40,7 +40,7 @@ export const defaultsSchema = z.strictObject({
 export type AppDefaults = z.infer<typeof defaultsSchema>;
 
 export function createFactoryDefaults(): AppDefaults {
-  const fixedReferenceTabs = new Set(['characters', 'connections', 'zwnj']);
+  const fixedReferenceTabs = new Set(['characters', 'connections', 'hard-words']);
   return {
     version: 1,
     theme: 'light',
@@ -56,9 +56,10 @@ export function createFactoryDefaults(): AppDefaults {
   };
 }
 
-/** Do not persist controls that have no effect on a tab. */
 /** Controls that were removed; stripped from stored payloads so old data still parses. */
-const retiredControls = ['onlyIssues'];
+const retiredControls = ['onlyIssues', 'letterSpacing'];
+/** Text fields of tabs that were removed (live typing, ZWNJ sheet). */
+const retiredTexts = ['liveTyping', 'zwnjPersian', 'zwnjArabic'];
 
 /**
  * Upgrade payloads saved by older versions: drop retired controls, and lift the
@@ -66,7 +67,10 @@ const retiredControls = ['onlyIssues'];
  */
 function migrateLegacy(input: unknown): unknown {
   if (!input || typeof input !== 'object') return input;
-  const root = input as { tabs?: unknown; sort?: unknown };
+  const root = input as { tabs?: unknown; sort?: unknown; texts?: unknown };
+  if (root.texts && typeof root.texts === 'object') {
+    for (const key of retiredTexts) delete (root.texts as Record<string, unknown>)[key];
+  }
   if (!root.tabs || typeof root.tabs !== 'object') return input;
   let legacySort: unknown;
   for (const [id, tab] of Object.entries(root.tabs)) {

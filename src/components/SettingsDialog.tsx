@@ -71,16 +71,6 @@ export function SettingsDialog({
               onChange={(e) => set({ typingTest: toSingleLine(e.target.value) })}
             />
           </Section>
-          <Section tab="live-typing">
-            <input
-              type="text"
-              aria-label={`متن ${tabTitle('live-typing')}`}
-              className="text-input"
-              maxLength={TEXT_MAX}
-              value={texts.liveTyping}
-              onChange={(e) => set({ liveTyping: toSingleLine(e.target.value) })}
-            />
-          </Section>
           <Section tab="paragraph">
             <textarea
               aria-label={`متن ${tabTitle('paragraph')}`}
@@ -131,34 +121,15 @@ export function SettingsDialog({
               onChange={(e) => set({ characters: e.target.value })}
             />
           </Section>
-          <Section
-            tab="zwnj"
-            hint="هر خط یک کلمه با نیم‌فاصله؛ ستون‌های «بدون فاصله» و «فاصله معمولی» خودکار ساخته می‌شوند."
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <label className="field">
-                فارسی
-                <textarea
-                  className="text-input"
-                  maxLength={TEXT_MAX}
-                  lang="fa"
-                  dir="rtl"
-                  value={texts.zwnjPersian}
-                  onChange={(e) => set({ zwnjPersian: e.target.value })}
-                />
-              </label>
-              <label className="field">
-                عربی
-                <textarea
-                  className="text-input"
-                  maxLength={TEXT_MAX}
-                  lang="ar"
-                  dir="rtl"
-                  value={texts.zwnjArabic}
-                  onChange={(e) => set({ zwnjArabic: e.target.value })}
-                />
-              </label>
-            </div>
+          <Section tab="hard-words" hint="هر خط یک کلمه یا عبارت.">
+            <textarea
+              aria-label={`متن ${tabTitle('hard-words')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              dir="rtl"
+              value={texts.hardWords}
+              onChange={(e) => set({ hardWords: e.target.value })}
+            />
           </Section>
         </fieldset>
       </div>

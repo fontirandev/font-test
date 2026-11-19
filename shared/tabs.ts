@@ -5,19 +5,15 @@ export type ControlId =
   | 'direction'
   | 'alignment'
   | 'lineHeight'
-  | 'letterSpacing'
+  | 'pageWidth'
   | 'features'
   | 'axes'
   | 'showMissing';
 
 export const tabDefinitions = [
   {
+    // Editable sample in every active font, with an optional auto-typing playback.
     id: 'typing-test',
-    title: 'تایپ خودکار',
-    controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
-  },
-  {
-    id: 'live-typing',
     title: 'تایپ',
     controls: ['display', 'fontSize', 'direction', 'alignment', 'features', 'axes'],
   },
@@ -25,14 +21,14 @@ export const tabDefinitions = [
     // A free-form textarea set in the one active font.
     id: 'paragraph',
     title: 'پاراگراف',
-    // Line height, letter spacing and alignment sit above the text box, not in the sidebar.
+    // Line height, alignment and page width sit above the text box, not in the sidebar.
     controls: [
       'display',
       'fontSize',
       'direction',
       'alignment',
       'lineHeight',
-      'letterSpacing',
+      'pageWidth',
       'features',
       'axes',
     ],
@@ -60,7 +56,13 @@ export const tabDefinitions = [
     controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
-  { id: 'zwnj', title: 'نیم‌فاصله', controls: ['axes'], singleFont: true },
+  // Words that are hard to draw well (many teeth, dots, tight joins), with every font setting.
+  {
+    id: 'hard-words',
+    title: 'عبارات دشوار',
+    controls: ['display', 'fontSize', 'features', 'axes'],
+    singleFont: true,
+  },
   // Glyph outlines are drawn from the font file at the shared axis values. Font size
   // and display apply to the row view only; the sidebar hides them in the grid view.
   {

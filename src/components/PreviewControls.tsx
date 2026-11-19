@@ -62,9 +62,48 @@ const alignments: { id: PreviewSettings['alignment']; label: string }[] = [
   { id: 'justify', label: 'Justify' },
 ];
 
+/** Paragraph box widths in px, plus the full content width. */
+export const pageWidths: PreviewSettings['pageWidth'][] = [
+  '320',
+  '480',
+  '640',
+  '960',
+  '1200',
+  'full',
+];
+
+/** Four text lines drawn flush to the side the alignment puts them on. */
+function AlignmentIcon({
+  alignment,
+  direction,
+}: {
+  alignment: PreviewSettings['alignment'];
+  direction: PreviewSettings['direction'];
+}) {
+  const side =
+    alignment === 'center' || alignment === 'justify'
+      ? alignment
+      : (alignment === 'start') === (direction === 'rtl')
+        ? 'right'
+        : 'left';
+  const widths = side === 'justify' ? [14, 14, 14, 9] : [14, 9, 14, 9];
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true">
+      {widths.map((width, i) => {
+        // The last justified line keeps the paragraph's own start side.
+        const lineSide = side === 'justify' ? (direction === 'rtl' ? 'right' : 'left') : side;
+        const x = lineSide === 'left' ? 1 : lineSide === 'right' ? 15 - width : (16 - width) / 2;
+        return (
+          <rect key={i} x={x} y={1 + i * 3.6} width={width} height="1.6" fill="currentColor" />
+        );
+      })}
+    </svg>
+  );
+}
+
 /**
- * Line height, letter spacing and alignment. Only the paragraph tab offers them,
- * and it shows them above its text box rather than in the sidebar.
+ * Line height (with its own reset), alignment and page width. Only the paragraph
+ * tab offers them, and it shows them above its text box rather than in the sidebar.
  */
 export function TextLayoutBar({
   controls: c,
@@ -73,43 +112,34 @@ export function TextLayoutBar({
   disabled = false,
 }: {
   controls: PreviewSettings;
-  /** The tab's saved defaults; the reset button restores these three from them. */
+  /** The tab's saved defaults; the reset button restores the line height from them. */
   defaults: PreviewSettings;
   onChange: (patch: Partial<PreviewSettings>) => void;
   disabled?: boolean;
 }) {
-  const initial = {
-    lineHeight: defaults.lineHeight,
-    letterSpacing: defaults.letterSpacing,
-    alignment: defaults.alignment,
-  };
-  const atDefaults = (Object.keys(initial) as (keyof typeof initial)[]).every(
-    (key) => c[key] === initial[key],
-  );
   return (
     <div className="text-layout-bar" dir="ltr">
-      <Slider
-        label="Line height"
-        min={0.8}
-        max={4}
-        step={0.05}
-        value={c.lineHeight}
-        disabled={disabled}
-        onChange={(lineHeight) => onChange({ lineHeight })}
-      />
-      <Slider
-        label="Letter spacing"
-        min={-10}
-        max={30}
-        step={0.1}
-        unit="px"
-        value={c.letterSpacing}
-        disabled={disabled}
-        onChange={(letterSpacing) => onChange({ letterSpacing })}
-      />
+      <div className="line-height-control">
+        <Slider
+          label="Line height"
+          min={0.8}
+          max={4}
+          step={0.05}
+          value={c.lineHeight}
+          disabled={disabled}
+          onChange={(lineHeight) => onChange({ lineHeight })}
+        />
+        <IconButton
+          icon="reset"
+          label="بازنشانی ارتفاع خط"
+          className="text-layout-reset"
+          disabled={disabled || c.lineHeight === defaults.lineHeight}
+          onClick={() => onChange({ lineHeight: defaults.lineHeight })}
+        />
+      </div>
       <div>
         <div className="control-label" id="alignment-label">
-          Text alignment
+          Alignment
         </div>
         <div className="alignment-modes" role="group" aria-labelledby="alignment-label">
           {alignments.map(({ id, label }) => (
@@ -117,21 +147,34 @@ export function TextLayoutBar({
               key={id}
               className="alignment-mode"
               aria-pressed={c.alignment === id}
+              aria-label={label}
+              title={label}
               disabled={disabled}
               onClick={() => onChange({ alignment: id })}
             >
-              {label}
+              <AlignmentIcon alignment={id} direction={c.direction} />
             </Button>
           ))}
         </div>
       </div>
-      <IconButton
-        icon="reset"
-        label="بازنشانی ارتفاع خط، فاصلهٔ حروف و چینش"
-        className="text-layout-reset"
-        disabled={disabled || atDefaults}
-        onClick={() => onChange(initial)}
-      />
+      <div>
+        <div className="control-label" id="page-width-label">
+          Page width
+        </div>
+        <div className="page-widths" role="group" aria-labelledby="page-width-label">
+          {pageWidths.map((width) => (
+            <Button
+              key={width}
+              className="page-width"
+              aria-pressed={c.pageWidth === width}
+              disabled={disabled}
+              onClick={() => onChange({ pageWidth: width })}
+            >
+              {width === 'full' ? 'Full' : width}
+            </Button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

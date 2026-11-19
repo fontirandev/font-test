@@ -1,16 +1,21 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type Dispatch,
+} from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
 import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
-import {
-  kerningForms,
-  kerningMarkGroups,
-  persianAlphabet,
-  withMarks,
-} from '../lib/samples';
+import { kerningForms, kerningMarkGroups, persianAlphabet, withMarks } from '../lib/samples';
 import {
   languageSheets,
   parseCharacters,
-  parseZwnjWords,
+  parseLines,
+  zwnjForms,
+  zwnjSample,
   type DefaultTexts,
 } from '../../shared/texts';
 import { QaReport, QaToolbar, type QaFilter } from './QaReport';
@@ -260,6 +265,7 @@ export function TestViews({
   // Insert at the caret (replacing any selection) and keep typing from there.
   // With `backspace`, an empty selection first grows to the code point before the caret.
   const insertText = (insert: string, backspace = false) => {
+    setPlaying(false);
     const el = liveInput.current;
     let start = el?.selectionStart ?? tab.text.length;
     const end = el?.selectionEnd ?? tab.text.length;
@@ -300,20 +306,12 @@ export function TestViews({
     );
     return () => window.clearInterval(timer);
   }, [playing, finished, segments.length, speed, fonts.length, position, dispatch, tabId]);
-  // Selecting fonts or changing the visible list restarts the auto-typing demo.
-  const fontKey = fonts.map((font) => font.id).join('|');
-  // A fresh demo (nothing typed yet) also starts on mount, e.g. after adding the first fonts.
-  const previousFontKey = useRef(position === 0 ? '' : fontKey);
+  // Fonts switched off mid-demo leave nothing to type into.
   useEffect(() => {
-    if (tabId !== 'typing-test' || previousFontKey.current === fontKey) return;
-    previousFontKey.current = fontKey;
-    if (!fontKey) {
-      setPlaying(false);
-      return;
-    }
-    dispatch({ type: 'set-typing', tab: tabId, patch: { position: 0 } });
-    setPlaying(true);
-  }, [fontKey, tabId, dispatch]);
+    if (fonts.length === 0) setPlaying(false);
+  }, [fonts.length]);
+  // While auto-typing runs (or is paused part-way) the cards show only what is typed so far.
+  const typed = playing || position > 0;
   // The paragraph textarea grows with its text so only the page scrolls, never the field.
   const paragraphFont = tabId === 'paragraph' ? fonts[0] : undefined;
   useLayoutEffect(() => {
@@ -344,118 +342,105 @@ export function TestViews({
     return () => observer.disconnect();
   }, [paragraphFont, tab.text, tab.controls]);
   const disabled = fonts.length === 0;
-  // Keyboard toggles and the open keyboard, shared by the live typing and paragraph tabs.
-  const keyboardBar = (
-    <>
-      <div className="insert-keys mt-2">
-        <div className="insert-key-group" role="group" aria-label="صفحه‌کلید">
-          {keyboardLayouts.map(({ id, name }) => (
-            <Button
-              key={id}
-              className="keyboard-toggle"
-              aria-pressed={keyboard === id}
-              disabled={disabled}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setKeyboard(keyboard === id ? null : id)}
-            >
-              ⌨ {name}
-            </Button>
-          ))}
-        </div>
-      </div>
-      {keyboardLayout && (
-        <div className="osk-pair" key={keyboardLayout.id}>
-          {[false, true].map((shifted) => (
-            <OnScreenKeyboard
-              key={String(shifted)}
-              layout={keyboardLayout}
-              initialShift={shifted}
-              disabled={disabled}
-              onInsert={(text) => insertText(text)}
-              onBackspace={() => insertText('', true)}
-            />
-          ))}
-        </div>
-      )}
-    </>
+  // Keyboard toggles and the open keyboard, shared by the typing and paragraph tabs.
+  const keyboardToggles = (
+    <div className="insert-key-group" role="group" aria-label="صفحه‌کلید">
+      {keyboardLayouts.map(({ id, name }) => (
+        <Button
+          key={id}
+          className="keyboard-toggle"
+          aria-pressed={keyboard === id}
+          disabled={disabled}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setKeyboard(keyboard === id ? null : id)}
+        >
+          ⌨ {name}
+        </Button>
+      ))}
+    </div>
+  );
+  const keyboardPanel = keyboardLayout && (
+    <div className="osk-pair" key={keyboardLayout.id}>
+      {[false, true].map((shifted) => (
+        <OnScreenKeyboard
+          key={String(shifted)}
+          layout={keyboardLayout}
+          initialShift={shifted}
+          disabled={disabled}
+          onInsert={(text) => insertText(text)}
+          onBackspace={() => insertText('', true)}
+        />
+      ))}
+    </div>
   );
   return (
     <>
       {tabId === 'typing-test' && (
         <div className="typing-settings panel">
-          <label className="field text-field">
-            متن تایپ خودکار
-            <input
-              type="text"
-              className="text-input"
-              spellCheck={false}
-              value={tab.text}
-              onChange={(e) => {
-                setPlaying(false);
-                setPosition(0);
-                dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(e.target.value) });
-              }}
-            />
-          </label>
-          <div className="toolbar">
-            <IconButton
-              icon={playing && !finished ? 'pause' : 'play'}
-              label={playing && !finished ? 'توقف تایپ' : 'شروع تایپ'}
-              variant="primary"
-              disabled={disabled || segments.length === 0}
-              onClick={() => {
-                if (finished) setPosition(0);
-                setPlaying(!playing || finished);
-              }}
-            />
-            <IconButton
-              icon="reset"
-              label="شروع مجدد"
-              disabled={disabled || position === 0}
-              onClick={() => {
-                setPlaying(false);
-                setPosition(0);
-              }}
-            />
-            <label className="speed-field">
-              <span>سرعت تایپ</span>
-              <select
-                aria-label="سرعت تایپ"
-                value={speed}
+          <div className="text-field typing-text">
+            <label className="field">
+              متن آزمایش
+              <input
+                ref={liveInput}
+                type="text"
+                className="text-input"
+                spellCheck={false}
+                value={tab.text}
                 disabled={disabled}
-                onChange={(e) => setSpeed(Number(e.target.value))}
-              >
-                {[1, 3, 5, 10, 20].map((n) => (
-                  <option key={n} value={n}>
-                    {n} حرف/ثانیه
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevron" />
+                onChange={(e) => {
+                  setPlaying(false);
+                  dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(e.target.value) });
+                }}
+              />
             </label>
-            <span role="status" className="ms-auto text-[10px] text-muted">
-              {position > 0 ? `${position} / ${segments.length}` : ''}
-            </span>
+            <div className="insert-keys">{keyboardToggles}</div>
+            {keyboardPanel}
           </div>
-        </div>
-      )}
-      {tabId === 'live-typing' && (
-        <div className="text-field panel mb-1">
-          <label className="field">
-            متن آزمایش
-            <input
-              ref={liveInput}
-              type="text"
-              className="text-input"
-              spellCheck={false}
-              value={tab.text}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(e.target.value) })
-              }
-            />
-          </label>
-          {keyboardBar}
+          <section className="autotype" aria-labelledby="autotype-title">
+            <h3 id="autotype-title" className="control-label">
+              تایپ خودکار
+            </h3>
+            <div className="autotype-controls">
+              <IconButton
+                icon={playing && !finished ? 'pause' : 'play'}
+                label={playing && !finished ? 'توقف تایپ' : 'شروع تایپ'}
+                variant="primary"
+                disabled={disabled || segments.length === 0}
+                onClick={() => {
+                  if (finished) setPosition(0);
+                  setPlaying(!playing || finished);
+                }}
+              />
+              <IconButton
+                icon="reset"
+                label="نمایش کامل متن"
+                disabled={disabled || (!playing && position === 0)}
+                onClick={() => {
+                  setPlaying(false);
+                  setPosition(0);
+                }}
+              />
+              <label className="speed-field">
+                <span>سرعت تایپ</span>
+                <select
+                  aria-label="سرعت تایپ"
+                  value={speed}
+                  disabled={disabled}
+                  onChange={(e) => setSpeed(Number(e.target.value))}
+                >
+                  {[1, 3, 5, 10, 20].map((n) => (
+                    <option key={n} value={n}>
+                      {n} حرف/ثانیه
+                    </option>
+                  ))}
+                </select>
+                <Icon name="chevron" />
+              </label>
+            </div>
+            <span role="status" className="autotype-progress" dir="ltr">
+              {typed ? `${position} / ${segments.length}` : ''}
+            </span>
+          </section>
         </div>
       )}
       {tabId === 'connections' && (
@@ -483,7 +468,12 @@ export function TestViews({
               بدون اعراب
             </Button>
             {kerningMarkGroups.map((group) => (
-              <div className="kerning-mark-group" key={group.id} role="group" aria-label={group.title}>
+              <div
+                className="kerning-mark-group"
+                key={group.id}
+                role="group"
+                aria-label={group.title}
+              >
                 <span className="kerning-mark-title">{group.title}</span>
                 {group.marks.map((mark) => (
                   <Button
@@ -506,13 +496,16 @@ export function TestViews({
       )}
       {tabId === 'paragraph' && (
         <div className="text-field panel mb-1">
-          <TextLayoutBar
-            controls={tab.controls}
-            defaults={tabDefaults}
-            disabled={disabled}
-            onChange={(patch) => dispatch({ type: 'set-controls', tab: tabId, patch })}
-          />
-          {keyboardBar}
+          <div className="paragraph-head">
+            <div className="insert-keys">{keyboardToggles}</div>
+            <TextLayoutBar
+              controls={tab.controls}
+              defaults={tabDefaults}
+              disabled={disabled}
+              onChange={(patch) => dispatch({ type: 'set-controls', tab: tabId, patch })}
+            />
+          </div>
+          {keyboardPanel}
           {fonts[0] && (
             <textarea
               ref={liveInput}
@@ -524,7 +517,9 @@ export function TestViews({
               style={{
                 ...previewStyle(fonts[0], tab),
                 lineHeight: tab.controls.lineHeight,
-                letterSpacing: `${tab.controls.letterSpacing}px`,
+                ...(tab.controls.pageWidth !== 'full' && {
+                  width: `${tab.controls.pageWidth}px`,
+                }),
               }}
               value={tab.text}
               disabled={disabled}
@@ -554,37 +549,32 @@ export function TestViews({
                 // A single-font tab shows its one font bare: no card, no name heading.
                 isSingleFont(tabId)
                   ? `preview-bare ${tabId === 'glyphs' ? 'glyphs-sheet' : ''} ${tabId === 'qa-report' ? 'qa-sheet' : ''}`
-                  : `preview-card panel ${tabId === 'typing-test' || tabId === 'live-typing' ? 'preview-card-compact' : ''}`
+                  : `preview-card panel ${tabId === 'typing-test' ? 'preview-card-compact' : ''}`
               }
               key={font.id}
             >
               {!isSingleFont(tabId) && (
                 <h2 className="preview-heading" title={font.name}>
                   <span className="preview-heading-name">{font.fileName}</span>
-                  {tabId === 'live-typing' && (
+                  {tabId === 'typing-test' && (
                     <span className="preview-heading-count">{index + 1}</span>
                   )}
                 </h2>
               )}
-              {(tabId === 'typing-test' || tabId === 'live-typing') &&
-                (tabId === 'typing-test' ? (
-                  <div
-                    className="preview-text preview-text-line"
-                    style={style}
-                    ref={(el) => {
-                      // Keep the newest typed letter in view while typing.
-                      if (!el || !playing) return;
-                      const rtl = getComputedStyle(el).direction === 'rtl';
-                      el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
-                    }}
-                  >
-                    {segments.slice(0, position).join('')}
-                  </div>
-                ) : (
-                  <div className="preview-text preview-text-compact" style={style}>
-                    {tab.text}
-                  </div>
-                ))}
+              {tabId === 'typing-test' && (
+                <div
+                  className="preview-text preview-text-line"
+                  style={style}
+                  ref={(el) => {
+                    // Keep the newest typed letter in view while typing.
+                    if (!el || !playing) return;
+                    const rtl = getComputedStyle(el).direction === 'rtl';
+                    el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
+                  }}
+                >
+                  {typed ? segments.slice(0, position).join('') : tab.text}
+                </div>
+              )}
               {tabId === 'languages' &&
                 languageSheets
                   .map((sheet) => ({ ...sheet, text: texts.languages[sheet.id] }))
@@ -631,34 +621,41 @@ export function TestViews({
                         </div>
                       ))}
                   </div>
+                  {/* One ZWNJ word three ways: with ZWNJ, joined, and with a space. */}
+                  <div className="zwnj-row" lang="fa">
+                    {zwnjForms(zwnjSample).map((text, i) => (
+                      <div className="zwnj-cell" key={i}>
+                        <span className="zwnj-label">
+                          {['با نیم‌فاصله', 'بدون فاصله', 'با فاصله'][i]}
+                        </span>
+                        <span className="char-glyph" style={style}>
+                          {text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                   {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
                 </>
               )}
-              {tabId === 'connections' && <ConnectionsGrid style={style} letter={letter} marks={marks} />}
-              {tabId === 'zwnj' && (
-                <table className="data-table zwnj-table">
-                  <thead>
-                    <tr>
-                      {['نیم‌فاصله U+200C', 'بدون فاصله', 'فاصله معمولی'].map((label) => (
-                        <th key={label}>{label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      ...parseZwnjWords(texts.zwnjPersian).map((row) => ({ row, lang: 'fa' })),
-                      ...parseZwnjWords(texts.zwnjArabic).map((row) => ({ row, lang: 'ar' })),
-                    ].map(({ row, lang }, i) => (
-                      <tr key={i} lang={lang}>
-                        {row.map((text, j) => (
-                          <td key={j} style={style}>
-                            {text}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {tabId === 'connections' && (
+                <ConnectionsGrid style={style} letter={letter} marks={marks} />
+              )}
+              {tabId === 'hard-words' && (
+                <div className="hard-words" lang="fa" style={{ fontSize: style.fontSize }}>
+                  {parseLines(texts.hardWords).map((word, i) => (
+                    <article className="hard-word panel" key={i}>
+                      <p className="hard-word-main" style={{ ...style, textAlign: 'center' }}>
+                        {word}
+                      </p>
+                      <p
+                        className="hard-word-reference"
+                        title="نمایش با فونت رابط کاربری برای مقایسه"
+                      >
+                        {word}
+                      </p>
+                    </article>
+                  ))}
+                </div>
               )}
               {tabId === 'glyphs' && <Glyphs font={font} controls={tab.controls} />}
               {tabId === 'qa-report' && (

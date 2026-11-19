@@ -32,14 +32,13 @@ export interface Workspace extends FontOrdering {
 export { WEIGHTS_TEXT_MAX };
 
 /** The typing tabs edit their text in a single-line field. */
-export const singleLineTabs: readonly TabId[] = ['typing-test', 'live-typing', 'weights'];
+export const singleLineTabs: readonly TabId[] = ['typing-test', 'weights'];
 export { toSingleLine };
 
 /** Starting text of a tab: the saved default for editable text tabs, built-in otherwise. */
 export function defaultText(id: TabId, defaults: AppDefaults): string {
   if (id === 'weights') return defaults.texts.weights;
   if (id === 'typing-test') return toSingleLine(defaults.texts.typingTest);
-  if (id === 'live-typing') return toSingleLine(defaults.texts.liveTyping);
   if (id === 'paragraph') return defaults.texts.paragraph;
   return sampleText;
 }
@@ -61,7 +60,7 @@ function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings
  * The text tabs are one workspace for testing a sample: every control changed in
  * one of them (letterforms, direction, alignment…) carries over to the others.
  */
-export const linkedTabs: readonly TabId[] = ['typing-test', 'live-typing', 'paragraph', 'weights'];
+export const linkedTabs: readonly TabId[] = ['typing-test', 'paragraph', 'weights'];
 
 /** Apply control values to the given tabs (every tab by default) that support them. */
 function applyShared(

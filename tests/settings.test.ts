@@ -73,7 +73,7 @@ test('only loopback and explicitly configured hosts are allowed', async () => {
 
 test('default texts: old payloads get the built-in texts, saved texts survive a round trip', async () => {
   const { normalizeDefaults } = await import('../shared/settings');
-  const { createFactoryTexts, parseCharacters, parseZwnjWords, TEXT_MAX } =
+  const { createFactoryTexts, parseCharacters, parseLines, zwnjForms, TEXT_MAX } =
     await import('../shared/texts');
   // A payload saved before texts existed (like the test server's) still loads.
   const legacy = createFactoryDefaults() as Partial<ReturnType<typeof createFactoryDefaults>>;
@@ -108,19 +108,19 @@ test('default texts: old payloads get the built-in texts, saved texts survive a 
   const big = 'ب'.repeat(TEXT_MAX);
   full.texts = {
     typingTest: big,
-    liveTyping: big,
     paragraph: big,
     weights: 'ب'.repeat(32),
     languages: { arabic: big, quran: big, urdu: big, kurdish: big },
     characters: big,
-    zwnjPersian: big,
-    zwnjArabic: big,
+    hardWords: big,
   };
   assert.ok(Buffer.byteLength(JSON.stringify(full)) < 64 * 1024);
   // Parsing helpers.
   assert.deepEqual(parseCharacters(' ۱  ۲\nالله ۱ '), ['۱', '۲', 'الله']);
-  assert.deepEqual(parseZwnjWords('می‌روم\n\n  هم‌زمان '), [
-    ['می‌روم', 'میروم', 'می روم'],
-    ['هم‌زمان', 'همزمان', 'هم زمان'],
-  ]);
+  assert.deepEqual(parseLines('گنجشکک\n\n  شستشو '), ['گنجشکک', 'شستشو']);
+  assert.deepEqual(zwnjForms('می‌روم'), ['می‌روم', 'میروم', 'می روم']);
+  // Texts of removed tabs (live typing, ZWNJ sheet) are dropped from old payloads.
+  const old = JSON.parse(JSON.stringify(createFactoryDefaults()));
+  Object.assign(old.texts, { liveTyping: 'x', zwnjPersian: 'y', zwnjArabic: 'z' });
+  assert.deepEqual(normalizeDefaults(old).texts, createFactoryTexts());
 });

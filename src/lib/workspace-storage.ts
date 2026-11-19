@@ -1,4 +1,6 @@
 import { controlsSchema, type AppDefaults, type PreviewSettings } from '../../shared/settings';
+
+const controlKeys = new Set(Object.keys(controlsSchema.shape));
 import { isSingleFont, supportsControl, tabIds, type TabId } from '../../shared/tabs';
 import { createWorkspace, type TabSession, type Workspace } from '../state/workspace';
 
@@ -58,7 +60,13 @@ export function readStoredWorkspace(defaults: AppDefaults): Workspace {
         }
         continue;
       }
-      const controlsResult = controlsSchema.partial().safeParse(candidate.controls);
+      // Drop controls that no longer exist (e.g. letter spacing) so the rest still parse.
+      const savedControls = isRecord(candidate.controls)
+        ? Object.fromEntries(
+            Object.entries(candidate.controls).filter(([key]) => controlKeys.has(key)),
+          )
+        : candidate.controls;
+      const controlsResult = controlsSchema.partial().safeParse(savedControls);
       const controls = { ...tabs[id].controls };
       if (controlsResult.success) {
         for (const [key, value] of Object.entries(controlsResult.data)) {

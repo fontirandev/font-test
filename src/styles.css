@@ -622,16 +622,39 @@
     gap: 12px;
     margin-bottom: 18px;
   }
-  /* Auto-typing: the text box sits above play / reset / speed in one panel. */
+  /* Typing tab: the big text box on the right, auto-typing controls on the left. */
   .typing-settings {
+    display: flex;
+    align-items: stretch;
     margin-bottom: 18px;
   }
-  .typing-settings .text-field {
-    padding: 15px 15px 0;
+  .typing-text {
+    flex: 1 1 auto;
+    min-width: 0;
   }
-  .typing-settings .toolbar {
-    min-height: 0;
+  .autotype {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 15px;
+    border-inline-start: 1px solid var(--line);
+  }
+  .autotype .control-label {
     margin-bottom: 0;
+  }
+  .autotype-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Room for the speed field's floating label. */
+    padding-top: 8px;
+  }
+  .autotype-progress {
+    min-height: 1em;
+    font-size: 10px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
   .field {
     display: flex;
@@ -810,6 +833,8 @@
   .paragraph-input {
     display: block;
     width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
     min-height: 60vh;
     margin-top: 8px;
     padding: 12px 16px;
@@ -985,25 +1010,53 @@
     padding: 4px 0;
     font-variant-numeric: tabular-nums;
   }
-  /* Paragraph tab: line height, letter spacing and alignment above the text box. */
-  .text-layout-bar {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-    gap: 24px;
-    align-items: end;
+  /* Paragraph tab: keyboards on the right, layout settings on the left, in one row. */
+  .paragraph-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--line);
   }
-  .alignment-modes {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Laid out left to right: line height, alignment, page width. */
+  .text-layout-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 20px;
+  }
+  .line-height-control {
+    display: flex;
+    align-items: flex-end;
     gap: 4px;
   }
+  .line-height-control .slider-control {
+    width: 180px;
+  }
+  .alignment-modes,
+  .page-widths {
+    display: flex;
+    gap: 2px;
+  }
   .alignment-mode {
-    padding: 4px 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .page-width {
+    min-width: 40px;
+    height: 32px;
+    padding: 0 6px;
     font-size: 11px;
+    font-variant-numeric: tabular-nums;
   }
   .alignment-mode[aria-pressed='true'],
+  .page-width[aria-pressed='true'],
   .size-preset[aria-pressed='true'],
   .display-mode[aria-pressed='true'],
   .joining-letter[aria-pressed='true'],
@@ -1139,11 +1192,6 @@
   .metadata-table td {
     min-width: 180px;
     vertical-align: top;
-  }
-  .zwnj-table {
-    background: var(--panel);
-    border-radius: 10px;
-    overflow: hidden;
   }
   .glyph-grid {
     display: grid;
@@ -1448,6 +1496,59 @@
   }
   .char-cell-missing .char-label {
     color: var(--danger);
+  }
+  /* Under the characters sheet: one ZWNJ word with ZWNJ, joined and spaced. */
+  .zwnj-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid var(--line);
+    border-inline-start: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .zwnj-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px 14px;
+    border-bottom: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+  }
+  .zwnj-label {
+    align-self: flex-start;
+    font-family: var(--font-sans);
+    font-size: 9px;
+    line-height: 1;
+    color: var(--muted);
+  }
+  /* Difficult words: rectangular boxes, the word in the tested font over the UI font. */
+  .hard-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  /* Boxes grow to fit their word, so a word is never broken across lines. */
+  .hard-word {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: max(220px, 5em);
+    max-width: 100%;
+  }
+  .hard-word-main {
+    flex: 1;
+    padding: 0.3em 16px;
+    line-height: 1.6;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .hard-word-reference {
+    padding: 8px 14px;
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
   }
   /* Language sheet: the text in the tested font, then in the UI font for comparison. */
   .preview-bare {

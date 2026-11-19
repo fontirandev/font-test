@@ -49,24 +49,49 @@ const languageTexts: Record<LanguageId, string> = {
     'زمانی کوردی زمانێکی دەوڵەمەندە و بە پیتی جیاواز نووسراوە. ئارام وتی: «ئایا ئەم دەقە نوێیەت خوێندووەتەوە؟» ئاوات وەڵامی دایەوە: «بەڵێ، لە ساڵی ٢٠٢٦ خوێندمەوە و نرخەکەی ١٢٣٫٤٥ دۆلار بوو.» ئەم دەقە هەموو پیت و هێما گرنگەکان تاقی دەکات: ! ؟ ، ؛',
 };
 
-/** ZWNJ words, one per line; the joined and spaced columns are derived from them. */
-const zwnjPersian = [
-  'می\u200cروم',
-  'خانه\u200cها',
-  'نوشته\u200cاند',
-  'بزرگ\u200cتر',
-  'هم\u200cزمان',
-  'بی\u200cنظیر',
+/**
+ * Words that are hard to get right in a Persian/Arabic typeface: runs of teeth,
+ * stacked dots, repeated joins. One per line; editable in Settings.
+ */
+const hardWords = [
+  // Long runs of teeth (س ش ب ت ن ی) that must stay even and countable.
+  'گنجشکک',
+  'نشستن',
+  'شستشو',
+  'نیستیم',
+  'بیستمین',
+  'سیستم',
+  // Crowded dots above and below, which must not collide.
+  'تثبیت',
+  'پنجشنبه',
+  'تشخیص',
+  'یخچال',
+  'تختخواب',
+  // Vertical stacks and tight joins (ح ج خ م ه after or before other letters).
+  'محمد',
+  'بهجت',
+  'تحمل',
+  // Lam, kaf and gaf combinations, and ligatures.
+  'لاله',
+  'کلاغ',
+  'گلگون',
+  // Ain, ghain and ta in different positions.
+  'فعالیت',
+  'طبیعت',
+  'غمگین',
+  // Phrases with half-spaces, where joins break and resume.
+  'پیش\u200cبینی\u200cنشده',
+  'می\u200cنشستیم',
 ];
-/** Arabic compounds that are written both joined and apart. */
-const zwnjArabic = ['عبد\u200cالله', 'إن\u200cشاء\u200cالله', 'عبد\u200cالرحمن'];
+
+/** The ZWNJ word shown, three ways, under the characters sheet. */
+export const zwnjSample = 'می\u200cروم';
 
 /** Per field; keeps every text together under the server's 64 KB request limit. */
 export const TEXT_MAX = 3000;
 const line = z.string().max(TEXT_MAX);
 export const textsSchema = z.strictObject({
   typingTest: line.default(toSingleLine(sampleText)),
-  liveTyping: line.default(toSingleLine(sampleText)),
   paragraph: line.default(paragraphText),
   /** The short editable sample for the weight-overlay tab. */
   weights: z.string().max(WEIGHTS_TEXT_MAX).default(weightsSampleText),
@@ -79,8 +104,8 @@ export const textsSchema = z.strictObject({
     .default(() => ({ ...languageTexts })),
   /** Characters to check, separated by spaces; a run like «الله» stays one cell. */
   characters: line.default(builtInCharacters.join(' ')),
-  zwnjPersian: line.default(zwnjPersian.join('\n')),
-  zwnjArabic: line.default(zwnjArabic.join('\n')),
+  /** Difficult words or phrases, one per line. */
+  hardWords: line.default(hardWords.join('\n')),
 });
 export type DefaultTexts = z.infer<typeof textsSchema>;
 
@@ -93,11 +118,15 @@ export function parseCharacters(text: string): string[] {
   return [...new Set(text.split(/\s+/).filter(Boolean))];
 }
 
-/** Each line is one word written with ZWNJ: [with ZWNJ, joined, with a space]. */
-export function parseZwnjWords(text: string): [string, string, string][] {
+/** Non-empty lines, trimmed. */
+export function parseLines(text: string): string[] {
   return text
     .split(/\r?\n/)
-    .map((word) => word.trim())
-    .filter(Boolean)
-    .map((word) => [word, word.replace(/\u200c/g, ''), word.replace(/\u200c/g, ' ')]);
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+/** A ZWNJ word written [with ZWNJ, joined, with a space]. */
+export function zwnjForms(word: string): [string, string, string] {
+  return [word, word.replace(/\u200c/g, ''), word.replace(/\u200c/g, ' ')];
 }

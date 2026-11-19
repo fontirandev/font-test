@@ -28,18 +28,18 @@ test('font activation, controls and text are isolated per tab', () => {
   state = workspaceReducer(state, { type: 'set-text', tab: 'typing-test', text: 'آزمایش' });
   assert.deepEqual(state.tabs['languages'], untouched);
   assert.equal(state.tabs['typing-test'].active.a, false);
-  assert.equal(state.tabs['live-typing'].active.a, true);
-  assert.notEqual(state.tabs['live-typing'].text, 'آزمایش');
+  assert.equal(state.tabs['paragraph'].active.a, true);
+  assert.notEqual(state.tabs['paragraph'].text, 'آزمایش');
   assert.deepEqual(state.order, ['b', 'a']);
   assert.equal(initial.tabs['typing-test'].active.a, true);
 });
 test('the three text tabs keep every control in step', () => {
   let state = workspaceReducer(setup(), {
     type: 'set-controls',
-    tab: 'live-typing',
+    tab: 'paragraph',
     patch: { features: { kern: false, ss01: true }, direction: 'ltr', alignment: 'center' },
   });
-  for (const id of ['typing-test', 'live-typing'] as const) {
+  for (const id of ['typing-test', 'paragraph'] as const) {
     assert.deepEqual(state.tabs[id].controls.features, { kern: false, ss01: true });
     assert.equal(state.tabs[id].controls.direction, 'ltr');
     assert.equal(state.tabs[id].controls.alignment, 'center');
@@ -55,7 +55,7 @@ test('the three text tabs keep every control in step', () => {
     defaults: createFactoryDefaults(),
   });
   assert.deepEqual(state.tabs['typing-test'].controls.features, {});
-  assert.equal(state.tabs['live-typing'].controls.direction, 'rtl');
+  assert.equal(state.tabs['paragraph'].controls.direction, 'rtl');
 });
 test('font size and variable axes are shared by every tab that offers them', () => {
   let state = workspaceReducer(setup(), {
@@ -166,20 +166,20 @@ test('variable axes are one value shared by every tab that offers them', () => {
     if (supportsControl(id, 'axes'))
       assert.deepEqual(state.tabs[id].controls.axes, { wght: 650 }, id);
   }
-  for (const id of ['weights', 'paragraph', 'characters', 'connections', 'zwnj'] as const) {
+  for (const id of ['weights', 'paragraph', 'characters', 'connections', 'hard-words'] as const) {
     assert.equal(supportsControl(id, 'axes'), true, id);
   }
 });
 test('reference sheets only offer the shared axes and keep the 32pt default', () => {
   const workspace = createWorkspace(createFactoryDefaults());
-  for (const tab of ['characters', 'zwnj'] as const) {
-    assert.equal(supportsControl(tab, 'fontSize'), false, tab);
-    assert.equal(workspace.tabs[tab].controls.fontSize, 32, tab);
-  }
+  assert.equal(supportsControl('characters', 'fontSize'), false);
+  assert.equal(workspace.tabs.characters.controls.fontSize, 32);
 });
-test('the kerning tab offers size, display, features and axes', () => {
-  for (const control of ['display', 'fontSize', 'features', 'axes'] as const) {
-    assert.equal(supportsControl('connections', control), true, control);
+test('the kerning and difficult-words tabs offer size, display, features and axes', () => {
+  for (const tab of ['connections', 'hard-words'] as const) {
+    for (const control of ['display', 'fontSize', 'features', 'axes'] as const) {
+      assert.equal(supportsControl(tab, control), true, `${tab} ${control}`);
+    }
   }
 });
 test('old saved defaults with per-tab sort and retired controls are migrated', () => {
@@ -194,11 +194,10 @@ test('old saved defaults with per-tab sort and retired controls are migrated', (
   const migrated = normalizeDefaults(legacy);
   assert.equal(migrated.sort, 'weight-desc');
   assert.equal('sort' in migrated.tabs.weights, false);
-  // Line height and letter spacing are back, for the paragraph tab only.
+  // Line height is kept for the paragraph tab only; letter spacing is retired.
   assert.equal(migrated.tabs.paragraph.controls.lineHeight, 3);
-  assert.equal(migrated.tabs.paragraph.controls.letterSpacing, 5);
+  assert.equal('letterSpacing' in migrated.tabs.paragraph.controls, false);
   assert.equal(migrated.tabs.weights.controls.lineHeight, 1.8);
-  assert.equal(migrated.tabs.weights.controls.letterSpacing, 0);
   assert.equal(createWorkspace(migrated).sort, 'weight-desc');
 });
 test('saved defaults for a tab that no longer exists still load', () => {
@@ -301,7 +300,7 @@ test('workspace choices survive a browser-storage round trip', () => {
     });
     workspace = workspaceReducer(workspace, {
       type: 'set-text',
-      tab: 'live-typing',
+      tab: 'typing-test',
       text: 'متن پایدار',
     });
     storeWorkspace(workspace);
@@ -309,11 +308,14 @@ test('workspace choices survive a browser-storage round trip', () => {
     // A tab added after the snapshot was saved shows the loaded fonts as adding them would.
     const older = JSON.parse(JSON.stringify(workspace));
     delete older.tabs['paragraph'];
-    delete older.tabs['live-typing'];
+    delete older.tabs['hard-words'];
+    // Controls that were removed since (letter spacing) don't discard the rest.
+    older.tabs['connections'].controls.letterSpacing = 4;
     localStorage.setItem('font-desk-workspace-v1', JSON.stringify(older));
     const restored = readStoredWorkspace(defaults);
     assert.deepEqual(restored.tabs['paragraph'].active, { a: true, b: false });
-    assert.deepEqual(restored.tabs['live-typing'].active, { a: true, b: true });
+    assert.deepEqual(restored.tabs['hard-words'].active, { a: true, b: false });
+    assert.equal(restored.tabs['connections'].controls.fontSize, 72);
     // Snapshots whose tabs disagree on axes restore with the open tab's values everywhere.
     const mixed = JSON.parse(JSON.stringify(workspace));
     mixed.currentTab = 'languages';
@@ -322,7 +324,7 @@ test('workspace choices survive a browser-storage round trip', () => {
     localStorage.setItem('font-desk-workspace-v1', JSON.stringify(mixed));
     const unified = readStoredWorkspace(defaults);
     assert.deepEqual(unified.tabs['typing-test'].controls.axes, { wght: 300 });
-    assert.deepEqual(unified.tabs['zwnj'].controls.axes, { wght: 300 });
+    assert.deepEqual(unified.tabs['hard-words'].controls.axes, { wght: 300 });
   } finally {
     Object.defineProperty(globalThis, 'localStorage', {
       configurable: true,

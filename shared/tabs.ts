@@ -59,7 +59,7 @@ export const tabDefinitions = [
   // Words that are hard to draw well (many teeth, dots, tight joins), with every font setting.
   {
     id: 'hard-words',
-    title: 'عبارات دشوار',
+    title: 'عبارات',
     controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },

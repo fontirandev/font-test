@@ -159,7 +159,7 @@ export function TextLayoutBar({
       </div>
       <div>
         <div className="control-label" id="page-width-label">
-          Page width
+          Paragraph width
         </div>
         <div className="page-widths" role="group" aria-labelledby="page-width-label">
           {pageWidths.map((width) => (

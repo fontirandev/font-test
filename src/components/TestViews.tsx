@@ -312,6 +312,10 @@ export function TestViews({
   }, [fonts.length]);
   // While auto-typing runs (or is paused part-way) the cards show only what is typed so far.
   const typed = playing || position > 0;
+  const setTypingText = (text: string) => {
+    setPlaying(false);
+    dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(text) });
+  };
   // The paragraph textarea grows with its text so only the page scrolls, never the field.
   const paragraphFont = tabId === 'paragraph' ? fonts[0] : undefined;
   useLayoutEffect(() => {
@@ -387,10 +391,7 @@ export function TestViews({
                 spellCheck={false}
                 value={tab.text}
                 disabled={disabled}
-                onChange={(e) => {
-                  setPlaying(false);
-                  dispatch({ type: 'set-text', tab: tabId, text: toSingleLine(e.target.value) });
-                }}
+                onChange={(e) => setTypingText(e.target.value)}
               />
             </label>
             <div className="insert-keys">{keyboardToggles}</div>
@@ -563,18 +564,24 @@ export function TestViews({
                 </h2>
               )}
               {tabId === 'typing-test' && (
-                <div
-                  className="preview-text preview-text-line"
+                <input
+                  type="text"
+                  className="preview-text preview-text-line preview-text-edit"
                   style={style}
+                  spellCheck={false}
+                  aria-label={`متن آزمایش — ${font.fileName}`}
+                  // Auto-typing shows a growing prefix; editing then would truncate the sample.
+                  value={typed ? segments.slice(0, position).join('') : tab.text}
+                  readOnly={typed}
+                  disabled={disabled}
+                  onChange={(e) => setTypingText(e.target.value)}
                   ref={(el) => {
                     // Keep the newest typed letter in view while typing.
                     if (!el || !playing) return;
                     const rtl = getComputedStyle(el).direction === 'rtl';
                     el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
                   }}
-                >
-                  {typed ? segments.slice(0, position).join('') : tab.text}
-                </div>
+                />
               )}
               {tabId === 'languages' &&
                 languageSheets

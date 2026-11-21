@@ -1,9 +1,8 @@
 import { createServer } from 'node:http';
-import { mkdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SettingsRepository } from './settings-repository';
-import { allowedHosts, handleSettingsApi, isAllowedHost } from './settings-api';
+import { allowedHosts, isAllowedHost } from './hosts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const port = Number(process.env.PORT ?? 5173);
@@ -14,9 +13,6 @@ const host = process.env.HOST ?? '127.0.0.1';
 // Comma-separated Host headers to accept besides localhost, e.g. "203.0.113.5:8030".
 const hosts = allowedHosts(port, process.env.FONT_DESK_ALLOWED_HOSTS);
 const development = process.argv.includes('--dev');
-const dataDirectory = resolve(process.env.FONT_DESK_DATA_DIR ?? resolve(root, '.data'));
-await mkdir(dataDirectory, { recursive: true, mode: 0o700 });
-const repository = new SettingsRepository(resolve(dataDirectory, 'settings.sqlite'));
 const server = createServer();
 const vite = development
   ? await (
@@ -27,7 +23,8 @@ const vite = development
         middlewareMode: true,
         hmr: { server },
         // Polling avoids inotify limits on Docker bind mounts (FONT_DESK_WATCH_POLLING=1).
-        watch: process.env.FONT_DESK_WATCH_POLLING === '1' ? { usePolling: true, interval: 300 } : {},
+        watch:
+          process.env.FONT_DESK_WATCH_POLLING === '1' ? { usePolling: true, interval: 300 } : {},
       },
       appType: 'spa',
     })
@@ -60,14 +57,6 @@ server.on('request', (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
     const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`);
-    if (url.pathname === '/api/defaults') {
-      await handleSettingsApi(request, response, repository);
-      return;
-    }
-    if (url.pathname.startsWith('/api/')) {
-      response.writeHead(404).end();
-      return;
-    }
     if (vite) {
       vite.middlewares(request, response);
       return;
@@ -108,10 +97,7 @@ async function shutdown() {
   if (closing) return;
   closing = true;
   await vite?.close();
-  server.close(() => {
-    repository.close();
-    process.exit(0);
-  });
+  server.close(() => process.exit(0));
   server.closeIdleConnections();
 }
 process.once('SIGINT', () => {

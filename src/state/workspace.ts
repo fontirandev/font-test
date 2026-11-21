@@ -5,7 +5,7 @@ import {
   type PreviewSettings,
 } from '../../shared/settings';
 import { isSingleFont, supportsControl, tabIds, type TabId } from '../../shared/tabs';
-import { sampleText, toSingleLine, weightsSampleText, WEIGHTS_TEXT_MAX } from '../../shared/texts';
+import { toSingleLine, WEIGHTS_TEXT_MAX } from '../../shared/texts';
 
 export interface FontIdentity {
   id: string;
@@ -40,7 +40,7 @@ export function defaultText(id: TabId, defaults: AppDefaults): string {
   if (id === 'weights') return defaults.texts.weights;
   if (id === 'typing-test') return toSingleLine(defaults.texts.typingTest);
   if (id === 'paragraph') return defaults.texts.paragraph;
-  return sampleText;
+  return toSingleLine(defaults.texts.typingTest);
 }
 
 /**

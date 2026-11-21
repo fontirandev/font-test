@@ -45,10 +45,15 @@ export const tabDefinitions = [
     controls: ['display', 'fontSize', 'features', 'axes'],
     singleFont: true,
   },
-  // Reference sheets deliberately use a consistent 32pt, solid rendering; only the
-  // variable axes (shared by every tab) can be changed there.
+  // The characters sheet keeps a solid rendering; only the size and the variable axes
+  // (both shared by every tab) can be changed there.
   // { id: 'diacritics', title: 'اعراب', controls: ['axes'], singleFont: true },
-  { id: 'characters', title: 'اعداد و علائم', controls: ['axes'], singleFont: true },
+  {
+    id: 'characters',
+    title: 'اعداد و علائم',
+    controls: ['fontSize', 'axes'],
+    singleFont: true,
+  },
   // Kerning is checked at different sizes, in outline and with features (e.g. kern) toggled.
   {
     id: 'connections',

@@ -1,5 +1,6 @@
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import { supportsControl, tabIds, type ControlId, type TabId } from './tabs';
+import { builtInFile, expandSettingsFile } from './built-in';
 import { createFactoryTexts, textsSchema } from './texts';
 
 const tag = z.string().regex(/^[a-zA-Z0-9 ]{4}$/);
@@ -39,21 +40,29 @@ export const defaultsSchema = z.strictObject({
 });
 export type AppDefaults = z.infer<typeof defaultsSchema>;
 
+/** Validates a settings.json document; a mistake is reported with its path in the file. */
+export function parseSettingsFile(input: unknown): AppDefaults {
+  try {
+    // Checked on its own first so a mistake there is reported at `controls`, not per tab.
+    z.looseObject({ controls: controlsSchema.partial().optional() }).parse(input);
+    return defaultsSchema.parse(expandSettingsFile(input));
+  } catch (error) {
+    if (error instanceof ZodError)
+      throw new Error(`settings.json is invalid:\n${z.prettifyError(error)}`);
+    throw error;
+  }
+}
+
+let builtInDefaults: AppDefaults | undefined;
+/** The project's settings.json as validated defaults, parsed once. Read-only at runtime. */
+function readBuiltIn(): AppDefaults {
+  builtInDefaults ??= parseSettingsFile(builtInFile);
+  return builtInDefaults;
+}
+
+/** A fresh copy of the built-in defaults in settings.json, what a reset goes back to. */
 export function createFactoryDefaults(): AppDefaults {
-  const fixedReferenceTabs = new Set(['characters', 'connections', 'hard-words']);
-  return {
-    version: 1,
-    theme: 'light',
-    sort: 'manual',
-    tabs: Object.fromEntries(
-      // Font size is shared by every tab, so no tab gets its own size.
-      tabIds.map((id) => [
-        id,
-        tabDefaultsSchema.parse(fixedReferenceTabs.has(id) ? { controls: { fontSize: 32 } } : {}),
-      ]),
-    ) as AppDefaults['tabs'],
-    texts: createFactoryTexts(),
-  };
+  return structuredClone(readBuiltIn());
 }
 
 /** Controls that were removed; stripped from stored payloads so old data still parses. */
@@ -98,7 +107,7 @@ function migrateLegacy(input: unknown): unknown {
 
 export function normalizeDefaults(input: unknown): AppDefaults {
   const parsed = defaultsSchema.parse(migrateLegacy(input));
-  const factory = createFactoryDefaults();
+  const factory = readBuiltIn();
   for (const id of tabIds) {
     for (const key of Object.keys(parsed.tabs[id].controls) as ControlId[]) {
       if (!supportsControl(id, key)) {

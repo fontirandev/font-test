@@ -10,14 +10,8 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: ${PORT:-8030}
-      FONT_DESK_DATA_DIR: /data
       FONT_DESK_ALLOWED_HOSTS: ${FONT_DESK_ALLOWED_HOSTS:-}
     ports:
       # Loopback only by default. Set BIND_ADDRESS=0.0.0.0 to publish publicly; note that
       # Docker-published ports bypass ufw, so the host firewall does not protect them.
       - '${BIND_ADDRESS:-127.0.0.1}:${PORT:-8030}:${PORT:-8030}'
-    volumes:
-      - font_desk_data:/data
-
-volumes:
-  font_desk_data:

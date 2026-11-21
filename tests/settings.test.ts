@@ -1,65 +1,130 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createServer } from 'node:http';
-import { once } from 'node:events';
-import { SettingsRepository } from '../server/settings-repository';
-import { handleSettingsApi } from '../server/settings-api';
-import { createFactoryDefaults } from '../shared/settings';
+import { readFileSync } from 'node:fs';
+import {
+  createFactoryDefaults,
+  normalizeDefaults,
+  parseSettingsFile,
+  tabDefaultsSchema,
+} from '../shared/settings';
+import { tabIds } from '../shared/tabs';
+import { loadDefaults, saveDefaults } from '../src/lib/defaults-client';
 
-test('SQLite round trip persists only validated defaults across connections', () => {
-  const folder = mkdtempSync(join(tmpdir(), 'font-desk-test-'));
-  const file = join(folder, 'settings.sqlite');
-  const repository = new SettingsRepository(file);
-  const defaults = createFactoryDefaults();
-  defaults.theme = 'dark';
-  defaults.tabs['typing-test'].controls.fontSize = 44;
-  repository.save(defaults);
-  assert.throws(() => repository.save({ ...defaults, fontBytes: [1, 2, 3] }));
-  repository.close();
-  const reopened = new SettingsRepository(file);
+const KEY = 'font-desk-defaults-v1';
+
+/** Runs `body` against an in-memory localStorage; `blocked` makes every access throw. */
+function withStorage(body: (memory: Map<string, string>) => void, blocked = false) {
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const memory = new Map<string, string>();
+  const guard = <T>(run: () => T) => {
+    if (blocked) throw new Error('storage disabled');
+    return run();
+  };
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => guard(() => memory.get(key) ?? null),
+      setItem: (key: string, value: string) => guard(() => memory.set(key, value)),
+      removeItem: (key: string) => guard(() => memory.delete(key)),
+    },
+  });
   try {
-    assert.deepEqual(reopened.read(), defaults);
+    body(memory);
   } finally {
-    reopened.close();
-    rmSync(folder, { recursive: true });
+    if (saved) Object.defineProperty(globalThis, 'localStorage', saved);
+    else delete (globalThis as { localStorage?: unknown }).localStorage;
   }
+}
+
+test('settings.json lists only overrides and expands to the full built-in defaults', () => {
+  const file = JSON.parse(readFileSync(new URL('../settings.json', import.meta.url), 'utf8'));
+  const defaults = createFactoryDefaults();
+  assert.deepEqual(parseSettingsFile(file), defaults);
+  // Tabs left out of the file take the schema defaults plus the shared `controls`.
+  const listed = new Set(Object.keys(file.tabs));
+  for (const id of tabIds) {
+    if (listed.has(id)) continue;
+    assert.deepEqual(defaults.tabs[id], tabDefaultsSchema.parse({ controls: file.controls }), id);
+  }
+  // List fields are joined one item per line.
+  assert.equal(defaults.texts.hardWords, file.texts.hardWords.join('\n'));
+  assert.equal(defaults.texts.paragraph, file.texts.paragraph.join('\n'));
+  // Each call is a fresh copy: changing one never changes the built-in defaults.
+  const copy = createFactoryDefaults();
+  copy.texts.typingTest = 'x';
+  copy.tabs.paragraph.controls.fontSize = 99;
+  assert.deepEqual(createFactoryDefaults(), defaults);
 });
 
-test('settings API enforces same-origin, rejects malformed/session payloads, and saves valid defaults', async () => {
-  const repository = new SettingsRepository(':memory:');
-  const server = createServer((request, response) => {
-    void handleSettingsApi(request, response, repository);
+test('controls in settings.json apply to every tab, and a tab entry wins', () => {
+  const file = JSON.parse(readFileSync(new URL('../settings.json', import.meta.url), 'utf8'));
+  const parsed = parseSettingsFile({
+    ...file,
+    controls: { fontSize: 36 },
+    tabs: { connections: { controls: { fontSize: 72 } } },
   });
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('No server address');
-  const origin = `http://127.0.0.1:${address.port}`;
-  const defaults = createFactoryDefaults();
-  defaults.theme = 'dark';
-  const save = (body: string, from = origin, type = 'application/json') =>
-    fetch(origin, { method: 'PUT', headers: { Origin: from, 'Content-Type': type }, body });
-  try {
-    assert.equal((await save(JSON.stringify(defaults), 'https://example.com')).status, 403);
-    assert.equal((await save('{broken')).status, 400);
-    assert.equal((await save(JSON.stringify({ ...defaults, fonts: [] }))).status, 400);
-    assert.equal((await save(JSON.stringify(defaults), origin, 'text/plain')).status, 415);
-    assert.equal((await save('x'.repeat(70 * 1024))).status, 413);
-    assert.equal(repository.read().theme, 'light');
-    assert.equal((await save(JSON.stringify(defaults))).status, 200);
-    assert.equal((await (await fetch(origin)).json()).theme, 'dark');
-  } finally {
-    server.closeAllConnections();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    repository.close();
+  for (const id of tabIds) {
+    assert.equal(parsed.tabs[id].controls.fontSize, id === 'connections' ? 72 : 36, id);
   }
+  // Without the block, the schema's own default applies.
+  const { controls: _, ...withoutControls } = file;
+  assert.equal(parseSettingsFile(withoutControls).tabs.paragraph.controls.fontSize, 48);
+});
+
+test('mistakes in settings.json are reported with what and where', () => {
+  const file = JSON.parse(readFileSync(new URL('../settings.json', import.meta.url), 'utf8'));
+  const fails = (change: Record<string, unknown>, message: RegExp) =>
+    assert.throws(() => parseSettingsFile({ ...structuredClone(file), ...change }), message);
+  fails({ tabs: { charcters: {} } }, /unknown tab "charcters"/);
+  fails(
+    { tabs: { paragraph: { controls: { fontsize: 30 } } } },
+    /"fontsize"[\s\S]*tabs\.paragraph\.controls/,
+  );
+  fails(
+    { tabs: { paragraph: { controls: { lineHeight: 9 } } } },
+    /tabs\.paragraph\.controls\.lineHeight/,
+  );
+  fails({ theme: 'blue' }, /at theme/);
+  fails({ controls: { fontSize: 500 } }, /at controls\.fontSize/);
+  fails({ controls: { size: 30 } }, /"size"[\s\S]*at controls/);
+  fails({ texts: { ...file.texts, hardWords: ['a', 1] } }, /texts\.hardWords/);
+  fails({ texts: { ...file.texts, weights: 'x'.repeat(40) } }, /texts\.weights/);
+  // Plain strings still work for the list fields.
+  const strings = { ...file.texts, hardWords: 'a\nb', paragraph: 'p' };
+  assert.equal(parseSettingsFile({ ...file, texts: strings }).texts.hardWords, 'a\nb');
+});
+
+test("a user's defaults live in localStorage on top of settings.json", () => {
+  withStorage((memory) => {
+    assert.deepEqual(loadDefaults(), createFactoryDefaults());
+    const defaults = createFactoryDefaults();
+    defaults.texts.typingTest = 'سلام';
+    defaults.tabs['typing-test'].controls.fontSize = 44;
+    saveDefaults(defaults);
+    assert.deepEqual(loadDefaults(), defaults);
+    // Session data never gets in.
+    assert.throws(() => saveDefaults({ ...defaults, fontBytes: [1, 2, 3] } as never));
+    assert.deepEqual(loadDefaults(), defaults);
+    // Resetting the texts and saving leaves no copy behind, whatever the theme.
+    saveDefaults({ ...createFactoryDefaults(), theme: 'dark' });
+    assert.equal(memory.has(KEY), false);
+    // A corrupt or tampered copy falls back to settings.json.
+    memory.set(KEY, '{broken');
+    assert.deepEqual(loadDefaults(), createFactoryDefaults());
+    memory.set(KEY, JSON.stringify({ ...defaults, fonts: [] }));
+    assert.deepEqual(loadDefaults(), createFactoryDefaults());
+  });
+});
+
+test('blocked browser storage still loads settings.json and reports a failed save', () => {
+  withStorage(() => {
+    assert.deepEqual(loadDefaults(), createFactoryDefaults());
+    assert.throws(() => saveDefaults(createFactoryDefaults()), /ذخیره/);
+  }, true);
 });
 
 test('only loopback and explicitly configured hosts are allowed', async () => {
-  const { allowedHosts, isAllowedHost } = await import('../server/settings-api');
+  const { allowedHosts, isAllowedHost } = await import('../server/hosts');
   const hosts = allowedHosts(8030, ' 203.0.113.5:8030 , Fonts.Example.com ');
   const request = (host?: string) => ({ headers: { host } }) as never;
   assert.ok(isAllowedHost(request('localhost:8030'), hosts));
@@ -72,7 +137,6 @@ test('only loopback and explicitly configured hosts are allowed', async () => {
 });
 
 test('default texts: old payloads get the built-in texts, saved texts survive a round trip', async () => {
-  const { normalizeDefaults } = await import('../shared/settings');
   const { createFactoryTexts, parseCharacters, parseLines, zwnjForms, TEXT_MAX } =
     await import('../shared/texts');
   // A payload saved before texts existed (like the test server's) still loads.
@@ -84,26 +148,18 @@ test('default texts: old payloads get the built-in texts, saved texts survive a 
   defaults.texts.typingTest = 'سلام';
   defaults.texts.weights = 'وزن نمونه';
   defaults.texts.languages.urdu = 'اردو';
-  const repository = new SettingsRepository(':memory:');
-  try {
-    repository.save(defaults);
-    assert.equal(repository.read().texts.typingTest, 'سلام');
-    assert.equal(repository.read().texts.weights, 'وزن نمونه');
-    assert.equal(repository.read().texts.languages.urdu, 'اردو');
-    // Unknown text keys and oversized texts are rejected.
-    assert.throws(() =>
-      repository.save({ ...defaults, texts: { ...defaults.texts, unknown: 'x' } }),
-    );
-    assert.throws(() =>
-      repository.save({
-        ...defaults,
-        texts: { ...defaults.texts, characters: 'x'.repeat(TEXT_MAX + 1) },
-      }),
-    );
-  } finally {
-    repository.close();
-  }
-  // Every field at its limit still fits the server's 64 KB request limit.
+  assert.deepEqual(normalizeDefaults(structuredClone(defaults)).texts, defaults.texts);
+  // Unknown text keys and oversized texts are rejected.
+  assert.throws(() =>
+    normalizeDefaults({ ...defaults, texts: { ...defaults.texts, unknown: 'x' } }),
+  );
+  assert.throws(() =>
+    normalizeDefaults({
+      ...defaults,
+      texts: { ...defaults.texts, characters: 'x'.repeat(TEXT_MAX + 1) },
+    }),
+  );
+  // Every field at its limit stays small next to a browser's localStorage quota.
   const full = createFactoryDefaults();
   const big = 'ب'.repeat(TEXT_MAX);
   full.texts = {

@@ -24,7 +24,7 @@ function Section({ tab, hint, children }: { tab: TabId; hint?: string; children:
   );
 }
 
-/** Default sample content of the text tabs, saved for every later session. */
+/** Default sample content of the text tabs, saved in this browser for later sessions. */
 export function SettingsDialog({
   defaults,
   onSaved,
@@ -35,19 +35,15 @@ export function SettingsDialog({
   onClose: () => void;
 }) {
   const [texts, setTexts] = useState<DefaultTexts>(() => structuredClone(defaults.texts));
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const set = (patch: Partial<DefaultTexts>) => setTexts((value) => ({ ...value, ...patch }));
-  async function save() {
-    setSaving(true);
+  function save() {
     setError('');
     try {
-      onSaved(await saveDefaults({ ...defaults, texts }));
+      onSaved(saveDefaults({ ...defaults, texts }));
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ذخیره انجام نشد.');
-    } finally {
-      setSaving(false);
     }
   }
   return (
@@ -55,12 +51,10 @@ export function SettingsDialog({
       title="متن‌های پیش‌فرض"
       className="modal-settings"
       bodyClassName="modal-settings-body"
-      onClose={() => {
-        if (!saving) onClose();
-      }}
+      onClose={onClose}
     >
       <div className="settings-scroll">
-        <fieldset disabled={saving} className="settings-texts">
+        <fieldset className="settings-texts">
           <Section tab="typing-test">
             <input
               type="text"
@@ -139,21 +133,11 @@ export function SettingsDialog({
         </p>
       )}
       <div className="settings-footer">
-        <Button disabled={saving} onClick={() => setTexts(createFactoryTexts())}>
-          بازگردانی متن‌های اصلی
-        </Button>
+        <Button onClick={() => setTexts(createFactoryTexts())}>بازگردانی متن‌های اصلی</Button>
         <span className="flex-1" />
-        <Button disabled={saving} onClick={onClose}>
-          انصراف
-        </Button>
-        <Button
-          disabled={saving}
-          variant="primary"
-          onClick={() => {
-            void save();
-          }}
-        >
-          {saving ? 'در حال ذخیره…' : 'ذخیره'}
+        <Button onClick={onClose}>انصراف</Button>
+        <Button variant="primary" onClick={save}>
+          ذخیره
         </Button>
       </div>
     </Modal>

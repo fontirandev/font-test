@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { featureLabel, isToggleableFeature } from '../src/components/PreviewControls';
 
 test('only discretionary OpenType features are offered as toggles', () => {
-  for (const tag of ['dlig', 'calt', 'kern', 'ss01', 'ss20', 'cv03']) assert.ok(isToggleableFeature(tag));
+  for (const tag of ['dlig', 'calt', 'kern', 'ss01', 'ss20', 'cv03'])
+    assert.ok(isToggleableFeature(tag));
   for (const tag of ['ccmp', 'locl', 'init', 'medi', 'fina', 'rlig', 'mark', 'mkmk', 'aalt'])
     assert.equal(isToggleableFeature(tag), false);
 });

@@ -45,7 +45,7 @@ help:
 	@echo "  make shell-prod        - Shell into the production container"
 	@echo ""
 	@echo "🧹 CLEANUP:"
-	@echo "  make clean             - Remove containers and volumes (saved defaults too)"
+	@echo "  make clean             - Remove containers and volumes"
 	@echo ""
 	@echo "💡 Open http://localhost:$(PORT) — change the port with PORT=8080 make up-local"
 	@echo ""
@@ -151,7 +151,7 @@ shell-prod:
 # ============================================================================
 
 clean:
-	@echo "⚠️  WARNING: This will remove all containers and volumes (including saved defaults)!"
+	@echo "⚠️  WARNING: This will remove all containers and volumes!"
 	@read -p "Are you sure? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \

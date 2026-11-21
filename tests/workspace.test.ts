@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createFactoryDefaults, normalizeDefaults } from '../shared/settings';
-import { supportsControl, tabIds } from '../shared/tabs';
+import { controlsSchema, createFactoryDefaults, normalizeDefaults } from '../shared/settings';
+import { supportsControl, tabIds, type ControlId } from '../shared/tabs';
 import { createWorkspace, orderedFonts, workspaceReducer } from '../src/state/workspace';
 import { featureCSS, variationCSS } from '../src/lib/fonts';
 import { inferWeight } from '../src/lib/weight';
@@ -170,10 +170,22 @@ test('variable axes are one value shared by every tab that offers them', () => {
     assert.equal(supportsControl(id, 'axes'), true, id);
   }
 });
-test('reference sheets only offer the shared axes and keep the 32pt default', () => {
-  const workspace = createWorkspace(createFactoryDefaults());
-  assert.equal(supportsControl('characters', 'fontSize'), false);
-  assert.equal(workspace.tabs.characters.controls.fontSize, 32);
+test('the characters sheet offers the shared size and axes, nothing else', () => {
+  for (const control of Object.keys(controlsSchema.shape) as ControlId[]) {
+    assert.equal(
+      supportsControl('characters', control),
+      control === 'fontSize' || control === 'axes',
+      control,
+    );
+  }
+  const state = workspaceReducer(setup(), {
+    type: 'set-controls',
+    tab: 'characters',
+    patch: { fontSize: 60 },
+  });
+  for (const id of tabIds) {
+    if (supportsControl(id, 'fontSize')) assert.equal(state.tabs[id].controls.fontSize, 60, id);
+  }
 });
 test('the kerning and difficult-words tabs offer size, display, features and axes', () => {
   for (const tab of ['connections', 'hard-words'] as const) {

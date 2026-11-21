@@ -1,52 +1,36 @@
-import { normalizeDefaults, type AppDefaults } from '../../shared/settings';
+import { createFactoryDefaults, normalizeDefaults, type AppDefaults } from '../../shared/settings';
 
 const DEFAULTS_KEY = 'font-desk-defaults-v1';
 
-function readStoredDefaults(): AppDefaults | null {
+/**
+ * The built-in defaults ship in settings.json and never change at runtime. A user's
+ * own defaults live only in this browser's localStorage, on top of them.
+ */
+export function loadDefaults(): AppDefaults {
   try {
     const value = localStorage.getItem(DEFAULTS_KEY);
-    return value ? normalizeDefaults(JSON.parse(value)) : null;
+    if (value) return normalizeDefaults(JSON.parse(value));
   } catch {
-    return null;
+    /* Unreadable, invalid or blocked storage falls back to settings.json. */
   }
-}
-
-function storeDefaults(defaults: AppDefaults): boolean {
-  try {
-    localStorage.setItem(DEFAULTS_KEY, JSON.stringify(defaults));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function loadDefaults(signal?: AbortSignal): Promise<AppDefaults> {
-  const stored = readStoredDefaults();
-  if (stored) return stored;
-  const response = await fetch('/api/defaults', { signal, cache: 'no-store' });
-  if (!response.ok) throw new Error('خواندن تنظیمات ذخیره‌شده ممکن نیست.');
-  const defaults = normalizeDefaults(await response.json());
-  storeDefaults(defaults);
-  return defaults;
+  return createFactoryDefaults();
 }
 
 /** Called only by an explicit Save defaults action, never from a preview effect. */
-export async function saveDefaults(defaults: AppDefaults): Promise<AppDefaults> {
-  const normalized = normalizeDefaults(defaults);
-  const savedLocally = storeDefaults(normalized);
+export function saveDefaults(defaults: AppDefaults): AppDefaults {
+  const normalized = normalizeDefaults(structuredClone(defaults));
   try {
-    const response = await fetch('/api/defaults', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(normalized),
-    });
-    if (!response.ok) throw new Error('ذخیره تنظیمات انجام نشد. دوباره تلاش کنید.');
-    const saved = normalizeDefaults(await response.json());
-    storeDefaults(saved);
-    return saved;
-  } catch (error) {
-    // Local browser storage is enough to restore this user's settings on refresh.
-    if (savedLocally) return normalized;
-    throw error;
+    // Matching settings.json means nothing is customized (a reset, then Save): keep no
+    // copy, so a later change to settings.json still reaches this browser. The theme
+    // is left out because the header toggle stores it on its own.
+    const factory = createFactoryDefaults();
+    if (JSON.stringify({ ...normalized, theme: factory.theme }) === JSON.stringify(factory)) {
+      localStorage.removeItem(DEFAULTS_KEY);
+    } else {
+      localStorage.setItem(DEFAULTS_KEY, JSON.stringify(normalized));
+    }
+  } catch {
+    throw new Error('ذخیره در حافظه‌ی مرورگر ممکن نشد. فضای ذخیره‌سازی مرورگر را بررسی کنید.');
   }
+  return normalized;
 }

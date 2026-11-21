@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { createFactoryDefaults, type AppDefaults } from '../shared/settings';
+import type { AppDefaults } from '../shared/settings';
 import { tabDefinitions } from '../shared/tabs';
 import { loadDefaults } from './lib/defaults-client';
 import { links } from './lib/links';
@@ -36,40 +36,8 @@ function useTheme(theme: AppDefaults['theme']) {
 }
 
 export function App() {
-  const [defaults, setDefaults] = useState<AppDefaults | null>(null);
-  const [error, setError] = useState('');
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    const controller = new AbortController();
-    setError('');
-    loadDefaults(controller.signal)
-      .then(setDefaults)
-      .catch((error) => {
-        if (!controller.signal.aborted) setError(error.message);
-      });
-    return () => controller.abort();
-  }, [attempt]);
-  if (!defaults)
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-        <Icon name="logo" />
-        <p role={error ? 'alert' : 'status'}>{error || 'در حال آماده‌سازی میز کار…'}</p>
-        {error && (
-          <>
-            <Button onClick={() => setAttempt(attempt + 1)}>تلاش دوباره</Button>
-            <Button onClick={() => setDefaults(createFactoryDefaults())}>
-              ادامه با تنظیمات موقت
-            </Button>
-          </>
-        )}
-      </div>
-    );
-  return <WorkspaceApp initialDefaults={defaults} />;
-}
-
-function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
-  const [defaults, setDefaults] = useState(initialDefaults);
-  const [workspace, dispatch] = useReducer(workspaceReducer, initialDefaults, readStoredWorkspace);
+  const [defaults, setDefaults] = useState(loadDefaults);
+  const [workspace, dispatch] = useReducer(workspaceReducer, defaults, readStoredWorkspace);
   const [fonts, setFonts] = useState<LoadedFont[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -313,7 +281,8 @@ function WorkspaceApp({ initialDefaults }: { initialDefaults: AppDefaults }) {
                   if (!emptyDragging) setEmptyDragging(true);
                 }}
                 onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setEmptyDragging(false);
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                    setEmptyDragging(false);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();

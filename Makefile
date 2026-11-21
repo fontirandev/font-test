@@ -16,7 +16,7 @@ PROD  := docker compose -f docker-compose.yml -f docker-compose.prod.yml
 # Default target
 help:
 	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║          Docker Compose Commands - Font Desk                   ║"
+	@echo "║          Docker Compose Commands - Font Test                   ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "📦 LOCAL DEVELOPMENT (Vite HMR, source mounted):"

@@ -91,7 +91,7 @@ server.on('request', (request, response) => {
     response.end('Local server error');
   });
 });
-server.listen(port, host, () => console.log(`Font Desk: http://127.0.0.1:${port}`));
+server.listen(port, host, () => console.log(`Font Test: http://127.0.0.1:${port}`));
 let closing = false;
 async function shutdown() {
   if (closing) return;

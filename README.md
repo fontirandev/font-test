@@ -1,4 +1,4 @@
-# Font Desk
+# Font Test
 
 A local Persian type-design workbench built with React, TypeScript, and Tailwind CSS. The interface follows the supplied [Figma design](https://www.figma.com/design/kf79BgCl04FVQMubBYpac5/fonttester?node-id=1-14). Testing workflows are informed by [FontiranFontTester](https://github.com/mojtabaem/FontiranFontTester); this implementation does not copy its source code.
 

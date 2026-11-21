@@ -5,7 +5,7 @@ export function DesignSystem({ onClose }: { onClose: () => void }) {
   const [on, setOn] = useState(true);
   const [size, setSize] = useState(16);
   return (
-    <Modal title="سیستم طراحی Font Desk" onClose={onClose}>
+    <Modal title="سیستم طراحی Font Test" onClose={onClose}>
       <p className="mb-5 leading-7 text-muted">
         کنترل‌های مشترک با رنگ‌های معنایی، حالت تمرکز صفحه‌کلید و حالت غیرفعال. پوسته از تنظیمات
         صفحه پیروی می‌کند.

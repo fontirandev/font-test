@@ -167,7 +167,7 @@ export function App() {
         <Icon name="logo" />
         <h1 className="text-xl font-semibold">اندازه صفحه پشتیبانی نمی‌شود</h1>
         <p className="leading-8 text-muted">
-          Font Desk برای کار با فونت روی نمایشگر بزرگ طراحی شده است. از رایانه یا صفحه‌ای با عرض
+          Font Test برای کار با فونت روی نمایشگر بزرگ طراحی شده است. از رایانه یا صفحه‌ای با عرض
           حداقل ۷۶۸ پیکسل استفاده کنید.
         </p>
       </div>
@@ -237,7 +237,7 @@ export function App() {
           <div className="flex items-center justify-center border-r border-line">
             <IconButton
               icon="info"
-              label="درباره Font Desk"
+              label="درباره Font Test"
               variant="ghost"
               onClick={() => setModal('about')}
             />

@@ -48,8 +48,8 @@
   --control: var(--grey-200);
   --primary: var(--grey-900);
   --on-primary: #fff;
-  --accent: #00c8b3;
-  --active: #e5fffc;
+  --accent: hsl(359, 70%, 59%);
+  --active: hsl(359, 87%, 94%);
   --disabled: var(--grey-100);
   --danger: #b42318;
   /* Icons are masks filled with these, so they follow the theme. */

@@ -336,13 +336,16 @@ export function App() {
         />
       )}
       {modal === 'about' && (
-        <Modal title="درباره Font Desk" onClose={() => setModal(null)}>
+        <Modal title="درباره" onClose={() => setModal(null)}>
+          <p className="about-version mb-3 text-sm text-muted" dir="ltr">
+            beta 1.0
+          </p>
           <p className="leading-8">
-            Font Desk ابزار تست فونتی است که برای کار روزانه‌ی تیم{' '}
+            این نرم‌افزار، پیش‌تر برای بررسی و آزمایش فونت‌های منتشرشده در
             <a className="about-link" href={links.fontiran} target="_blank" rel="noreferrer">
               فونت‌ایران
             </a>{' '}
-            ساخته شد و حالا به‌صورت متن‌باز در دسترس همه است.
+            استفاده می‌شد و اکنون به‌صورت متن‌باز در دسترس عموم قرار گرفته است.
           </p>
           <p className="about-privacy mt-4 leading-8">
             <strong>حریم خصوصی شما محفوظ است.</strong> همه‌چیز در مرورگر خودتان اجرا می‌شود و

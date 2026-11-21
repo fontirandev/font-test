@@ -18,7 +18,7 @@ export type IconName =
   | 'add';
 /** Intrinsic sizes of the SVGs in public/design. */
 export const iconSizes: Record<IconName, [number, number]> = {
-  logo: [32, 32],
+  logo: [66, 32],
   sun: [48, 48],
   moon: [24, 24],
   gear: [24, 24],

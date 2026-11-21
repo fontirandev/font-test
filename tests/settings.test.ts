@@ -48,6 +48,7 @@ test('settings.json lists only overrides and expands to the full built-in defaul
   }
   // List fields are joined one item per line.
   assert.equal(defaults.texts.hardWords, file.texts.hardWords.join('\n'));
+  assert.deepEqual(defaults.texts.hardPhrases, file.texts.hardPhrases);
   assert.equal(defaults.texts.paragraph, file.texts.paragraph.join('\n'));
   // Each call is a fresh copy: changing one never changes the built-in defaults.
   const copy = createFactoryDefaults();
@@ -137,7 +138,7 @@ test('only loopback and explicitly configured hosts are allowed', async () => {
 });
 
 test('default texts: old payloads get the built-in texts, saved texts survive a round trip', async () => {
-  const { createFactoryTexts, parseCharacters, parseLines, zwnjForms, TEXT_MAX } =
+  const { createFactoryTexts, parseCharacters, parseLines, TEXT_MAX } =
     await import('../shared/texts');
   // A payload saved before texts existed (like the test server's) still loads.
   const legacy = createFactoryDefaults() as Partial<ReturnType<typeof createFactoryDefaults>>;
@@ -166,15 +167,23 @@ test('default texts: old payloads get the built-in texts, saved texts survive a 
     typingTest: big,
     paragraph: big,
     weights: 'ب'.repeat(32),
-    languages: { arabic: big, quran: big, urdu: big, kurdish: big },
+    languages: {
+      farsi: big,
+      english: big,
+      arabic: big,
+      quran: big,
+      urdu: big,
+      kurdish: big,
+    },
     characters: big,
     hardWords: big,
+    hardPhrases: [{ text: big, reference: big }],
   };
-  assert.ok(Buffer.byteLength(JSON.stringify(full)) < 64 * 1024);
+  // Six language sheets and phrase objects still leave a small defaults document.
+  assert.ok(Buffer.byteLength(JSON.stringify(full)) < 128 * 1024);
   // Parsing helpers.
   assert.deepEqual(parseCharacters(' ۱  ۲\nالله ۱ '), ['۱', '۲', 'الله']);
   assert.deepEqual(parseLines('گنجشکک\n\n  شستشو '), ['گنجشکک', 'شستشو']);
-  assert.deepEqual(zwnjForms('می‌روم'), ['می‌روم', 'میروم', 'می روم']);
   // Texts of removed tabs (live typing, ZWNJ sheet) are dropped from old payloads.
   const old = JSON.parse(JSON.stringify(createFactoryDefaults()));
   Object.assign(old.texts, { liveTyping: 'x', zwnjPersian: 'y', zwnjArabic: 'z' });

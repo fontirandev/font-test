@@ -6,6 +6,7 @@ import {
   WEIGHTS_TEXT_MAX,
   createFactoryTexts,
   languageSheets,
+  pairHardPhrases,
   toSingleLine,
   type DefaultTexts,
 } from '../../shared/texts';
@@ -115,14 +116,47 @@ export function SettingsDialog({
               onChange={(e) => set({ characters: e.target.value })}
             />
           </Section>
-          <Section tab="hard-words" hint="هر خط یک کلمه یا عبارت.">
+          <Section
+            tab="hard-words"
+            hint="هر خط یک کلمه. برای بخش پایین: هر خط یک عبارت، و در کادر بعد توضیح/مرجع همان خط."
+          >
             <textarea
-              aria-label={`متن ${tabTitle('hard-words')}`}
+              aria-label={`کلمات ${tabTitle('hard-words')}`}
               className="text-input"
               maxLength={TEXT_MAX}
               dir="rtl"
               value={texts.hardWords}
               onChange={(e) => set({ hardWords: e.target.value })}
+            />
+            <textarea
+              aria-label={`عبارات ${tabTitle('hard-words')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              dir="rtl"
+              value={texts.hardPhrases.map((p) => p.text).join('\n')}
+              onChange={(e) =>
+                set({
+                  hardPhrases: pairHardPhrases(
+                    e.target.value,
+                    texts.hardPhrases.map((p) => p.reference).join('\n'),
+                  ),
+                })
+              }
+            />
+            <textarea
+              aria-label={`مرجع عبارات ${tabTitle('hard-words')}`}
+              className="text-input"
+              maxLength={TEXT_MAX}
+              dir="rtl"
+              value={texts.hardPhrases.map((p) => p.reference).join('\n')}
+              onChange={(e) =>
+                set({
+                  hardPhrases: pairHardPhrases(
+                    texts.hardPhrases.map((p) => p.text).join('\n'),
+                    e.target.value,
+                  ),
+                })
+              }
             />
           </Section>
         </fieldset>

@@ -8,14 +8,12 @@ import {
   type Dispatch,
 } from 'react';
 import { isSingleFont, type TabId } from '../../shared/tabs';
-import { featureCSS, variationCSS, type LoadedFont } from '../lib/fonts';
+import { featureCSS, textHasMissingGlyph, variationCSS, type LoadedFont } from '../lib/fonts';
 import { kerningForms, kerningMarkGroups, persianAlphabet, withMarks } from '../lib/samples';
 import {
   languageSheets,
   parseCharacters,
   parseLines,
-  zwnjForms,
-  zwnjSample,
   type DefaultTexts,
 } from '../../shared/texts';
 import { QaReport, QaToolbar, type QaFilter } from './QaReport';
@@ -117,12 +115,6 @@ function ConnectionsGrid({
 }
 
 /** Fill share per layer: 50% for one or two fonts, otherwise split evenly. */
-/** True when the font has no glyph for some character of `text`; null if it can't tell. */
-function missingGlyph(font: LoadedFont, text: string): boolean | null {
-  if (!font.parsed) return null;
-  return Array.from(text).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0);
-}
-
 function weightsLayerAlpha(count: number): number {
   return count <= 2 ? 0.5 : 1 / count;
 }
@@ -242,7 +234,7 @@ export function TestViews({
   tabId: TabId;
   /** Saved default settings of this tab. */
   tabDefaults: PreviewSettings;
-  /** Saved default content of the languages, characters and ZWNJ tabs. */
+  /** Saved default content of the languages, characters and عبارات tabs. */
   texts: DefaultTexts;
   tab: TabSession;
   fonts: LoadedFont[];
@@ -567,7 +559,11 @@ export function TestViews({
                 <input
                   type="text"
                   className="preview-text preview-text-line preview-text-edit"
-                  style={style}
+                  style={{
+                    ...style,
+                    // 15% of the preview size above and below so tall glyphs are not clipped.
+                    paddingBlock: `${tab.controls.fontSize * 0.15}pt`,
+                  }}
                   spellCheck={false}
                   aria-label={`متن آزمایش — ${font.fileName}`}
                   // Auto-typing shows a growing prefix; editing then would truncate the sample.
@@ -587,7 +583,12 @@ export function TestViews({
                 languageSheets
                   .map((sheet) => ({ ...sheet, text: texts.languages[sheet.id] }))
                   .map((sample) => (
-                    <article key={sample.id} className="language-sample panel" lang={sample.lang}>
+                    <article
+                      key={sample.id}
+                      className="language-sample panel"
+                      lang={sample.lang}
+                      dir={sample.dir}
+                    >
                       <h2 className="preview-heading">
                         <span className="preview-heading-name">{sample.title}</span>
                         <span className="preview-heading-count" dir="ltr">
@@ -611,9 +612,7 @@ export function TestViews({
                     {parseCharacters(texts.characters)
                       .map((char) => ({
                         char,
-                        missing: font.parsed
-                          ? Array.from(char).some((ch) => font.parsed!.charToGlyphIndex(ch) === 0)
-                          : null,
+                        missing: font.parsed ? textHasMissingGlyph(font.parsed, char) : null,
                       }))
                       .filter(({ missing }) => tab.controls.showMissing || !missing)
                       .map(({ char, missing }) => (
@@ -629,19 +628,6 @@ export function TestViews({
                         </div>
                       ))}
                   </div>
-                  {/* One ZWNJ word three ways: with ZWNJ, joined, and with a space. */}
-                  <div className="zwnj-row" lang="fa">
-                    {zwnjForms(zwnjSample).map((text, i) => (
-                      <div className="zwnj-cell" key={i}>
-                        <span className="zwnj-label">
-                          {['با نیم‌فاصله', 'بدون فاصله', 'با فاصله'][i]}
-                        </span>
-                        <span className="char-glyph" style={style}>
-                          {text}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
                   {!font.parsed && <p className="p-3 text-muted">{font.inspectionWarning}</p>}
                 </>
               )}
@@ -649,21 +635,38 @@ export function TestViews({
                 <ConnectionsGrid style={style} letter={letter} marks={marks} />
               )}
               {tabId === 'hard-words' && (
-                <div className="hard-words" lang="fa" style={{ fontSize: style.fontSize }}>
-                  {parseLines(texts.hardWords).map((word, i) => (
-                    <article className="hard-word panel" key={i}>
-                      <p className="hard-word-main" style={{ ...style, textAlign: 'center' }}>
-                        {word}
-                      </p>
-                      <p
-                        className="hard-word-reference"
-                        title="نمایش با فونت رابط کاربری برای مقایسه"
-                      >
-                        {word}
-                      </p>
-                    </article>
-                  ))}
-                </div>
+                <>
+                  <div className="hard-words" lang="fa" style={{ fontSize: style.fontSize }}>
+                    {parseLines(texts.hardWords).map((word, i) => (
+                      <article className="hard-word panel" key={i}>
+                        <p className="hard-word-main" style={{ ...style, textAlign: 'center' }}>
+                          {word}
+                        </p>
+                        <p
+                          className="hard-word-reference"
+                          title="نمایش با فونت رابط کاربری برای مقایسه"
+                        >
+                          {word}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="hard-phrases" lang="fa" style={{ fontSize: style.fontSize }}>
+                    {texts.hardPhrases.map((phrase, i) => (
+                      <article className="hard-phrase panel" key={i}>
+                        <p className="hard-phrase-main" style={style}>
+                          {phrase.text}
+                        </p>
+                        <p
+                          className="hard-phrase-reference"
+                          title="نمایش با فونت رابط کاربری برای مقایسه"
+                        >
+                          {phrase.reference}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </>
               )}
               {tabId === 'glyphs' && <Glyphs font={font} controls={tab.controls} />}
               {tabId === 'qa-report' && (

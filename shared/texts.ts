@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { builtInTexts } from './built-in';
+import { builtInTexts, type HardPhrase } from './built-in';
 
 /**
  * Editable sample content for the text tabs. The built-in values live in
@@ -10,22 +10,34 @@ import { builtInTexts } from './built-in';
 export const toSingleLine = (text: string) => text.replace(/\s*[\r\n]+\s*/g, ' ');
 export const WEIGHTS_TEXT_MAX = 32;
 
-/** Language sheets from the old tester; only each sheet's text is editable. */
+/** Language sheets; only each sheet's text is editable. First cards are Farsi then English. */
 export const languageSheets = [
-  { id: 'arabic', title: 'عربی', lang: 'ar' },
-  { id: 'quran', title: 'قرآن', lang: 'ar' },
-  { id: 'urdu', title: 'اردو', lang: 'ur' },
-  { id: 'kurdish', title: 'کردی', lang: 'ckb' },
+  { id: 'farsi', title: 'فارسی', lang: 'fa', dir: 'rtl' },
+  { id: 'english', title: 'انگلیسی', lang: 'en', dir: 'ltr' },
+  { id: 'arabic', title: 'عربی', lang: 'ar', dir: 'rtl' },
+  { id: 'quran', title: 'قرآن', lang: 'ar', dir: 'rtl' },
+  { id: 'urdu', title: 'اردو', lang: 'ur', dir: 'rtl' },
+  { id: 'kurdish', title: 'کردی', lang: 'ckb', dir: 'rtl' },
 ] as const;
 export type LanguageId = (typeof languageSheets)[number]['id'];
-
-/** The ZWNJ word shown, three ways, under the characters sheet. */
-export const zwnjSample = 'می\u200cروم';
+export type { HardPhrase };
 
 /** Per field; keeps every text together well inside a browser's localStorage quota. */
 export const TEXT_MAX = 3000;
 const line = z.string().max(TEXT_MAX);
+const phrase = z.strictObject({
+  text: line,
+  /** Shown under the sample in the UI font; may add a short note. */
+  reference: line,
+});
 const languageTexts = builtInTexts.languages as Record<LanguageId, string>;
+
+/** Older saves stored phrases as one newline-joined string; lift those to objects. */
+function coerceHardPhrases(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  return parseLines(value).map((text) => ({ text, reference: text }));
+}
+
 /** Fields missing from a payload (saved by an older version) take settings.json's text. */
 export const textsSchema = z.strictObject({
   typingTest: line.default(builtInTexts.typingTest),
@@ -41,8 +53,13 @@ export const textsSchema = z.strictObject({
     .default(() => ({ ...languageTexts })),
   /** Characters to check, separated by spaces; a run like «الله» stays one cell. */
   characters: line.default(builtInTexts.characters),
-  /** Difficult words or phrases, one per line. */
+  /** Difficult words, one per line (grid cards). */
   hardWords: line.default(builtInTexts.hardWords),
+  /** Full-width عبارت cards: sample text plus a separate reference/note line. */
+  hardPhrases: z.preprocess(
+    coerceHardPhrases,
+    z.array(phrase).default(() => structuredClone(builtInTexts.hardPhrases)),
+  ),
 });
 export type DefaultTexts = z.infer<typeof textsSchema>;
 
@@ -63,7 +80,11 @@ export function parseLines(text: string): string[] {
     .filter(Boolean);
 }
 
-/** A ZWNJ word written [with ZWNJ, joined, with a space]. */
-export function zwnjForms(word: string): [string, string, string] {
-  return [word, word.replace(/\u200c/g, ''), word.replace(/\u200c/g, ' ')];
+/** Pair phrase lines with reference lines (missing refs reuse the phrase). */
+export function pairHardPhrases(texts: string, references: string): HardPhrase[] {
+  const refs = parseLines(references);
+  return parseLines(texts).map((text, i) => ({
+    text,
+    reference: refs[i] ?? text,
+  }));
 }

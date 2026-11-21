@@ -54,9 +54,10 @@ Open `http://localhost:8030`. Use `PORT=9000 make up-local` to pick another port
 | `texts.typingTest` | One line of text for the typing tab                                                                              |
 | `texts.paragraph`  | List of paragraphs for the paragraph tab                                                                         |
 | `texts.weights`    | Short sample for the weight tab, at most 32 characters                                                           |
-| `texts.languages`  | One text each for `arabic`, `quran`, `urdu`, `kurdish`                                                           |
+| `texts.languages`  | One text each for `farsi`, `english`, `arabic`, `quran`, `urdu`, `kurdish`                                       |
 | `texts.characters` | Characters to check, separated by spaces (`الله` stays one cell)                                                 |
-| `texts.hardWords`  | List of difficult words or phrases, one per item                                                                 |
+| `texts.hardWords`  | List of difficult words, one per item                                                                            |
+| `texts.hardPhrases`| List of `{ text, reference }` for full-width عبارات cards (`reference` may add a note)                            |
 
 Tab names: `typing-test`, `paragraph`, `weights`, `languages`, `characters`, `connections`, `hard-words`, `glyphs`, `metadata`, `qa-report`. A tab entry looks like `"paragraph": { "controls": { "lineHeight": 2 } }`, and `"activateNewFonts": false` stops new fonts being switched on in that tab.
 

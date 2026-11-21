@@ -814,7 +814,13 @@
     /* The scroll box clips vertically too, so size the line from the font's own
        metrics and leave room for ink (heavy dots, marks) that hangs outside them. */
     line-height: normal;
-    padding: 0.15em 8px;
+    padding-block: 0.15em;
+    padding-inline: 8px;
+  }
+  /* Typing cards: 15% of the preview font size above and below so ink is not clipped. */
+  .preview-card-compact .preview-text-line {
+    padding-block: 0.15em;
+    line-height: 1.4;
   }
   /* Keep a full-height line box before anything is typed, so cards don't jump. */
   .preview-text-line::after {
@@ -1235,6 +1241,7 @@
     row-gap: 8px;
     padding: 16px;
     border: 1px solid var(--line);
+    direction: rtl;
   }
   .glyph-row-item {
     display: block;
@@ -1518,30 +1525,6 @@
   .char-cell-missing .char-label {
     color: var(--danger);
   }
-  /* Under the characters sheet: one ZWNJ word with ZWNJ, joined and spaced. */
-  .zwnj-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    border-top: 1px solid var(--line);
-    border-inline-start: 1px solid var(--line);
-    background: var(--panel);
-  }
-  .zwnj-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 8px 14px;
-    border-bottom: 1px solid var(--line);
-    border-inline-end: 1px solid var(--line);
-  }
-  .zwnj-label {
-    align-self: flex-start;
-    font-family: var(--font-sans);
-    font-size: 9px;
-    line-height: 1;
-    color: var(--muted);
-  }
   /* Difficult words: rectangular boxes, the word in the tested font over the UI font. */
   .hard-words {
     display: flex;
@@ -1566,6 +1549,31 @@
   .hard-word-reference {
     padding: 8px 14px;
     text-align: center;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+  }
+  /* Second عبارات section: one phrase per full-width card. */
+  .hard-phrases {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  .hard-phrase {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .hard-phrase-main {
+    padding: 0.4em 16px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .hard-phrase-reference {
+    padding: 8px 14px;
     font-family: var(--font-sans);
     font-size: 14px;
     color: var(--muted);
@@ -1649,14 +1657,12 @@
   }
   .language-sample-main {
     padding: 14px 14px 10px;
-    direction: rtl;
     line-height: 1.85;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
   .language-sample-reference {
     padding: 8px 14px 12px;
-    direction: rtl;
     line-height: 1.7;
     white-space: pre-wrap;
     overflow-wrap: anywhere;

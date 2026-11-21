@@ -11,7 +11,7 @@ const displayModes: { id: PreviewSettings['display']; label: string }[] = [
 ];
 
 /** One-click font sizes (pt) under the size slider. */
-const sizePresets = [16, 24, 48, 64, 124, 248];
+const sizePresets = [16, 24, 32, 48, 64, 96];
 
 /**
  * Optional (discretionary) OpenType features a designer turns on or off while testing.

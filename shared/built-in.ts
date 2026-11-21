@@ -6,13 +6,14 @@ import { tabIds } from './tabs';
  * - `controls` sets controls for every tab at once (e.g. the shared font size).
  * - `tabs` lists only what differs per tab; it wins over `controls`. Missing tabs and
  *   controls take the schema defaults.
- * - `paragraph` and `hardWords` may be lists, one paragraph or word per item.
+ * - `paragraph` and `hardWords` may be lists, one item per line.
+ * - `hardPhrases` is a list of `{ text, reference }` (or a plain string that fills both).
  * - `version` is implied.
  * This module expands it to the stored-defaults shape. A misspelled tab name fails
  * here by name instead of being silently dropped; the schema catches the rest.
  */
 
-type Lines = string | string[];
+export type HardPhrase = { text: string; reference: string };
 export type BuiltInTexts = {
   typingTest: string;
   paragraph: string;
@@ -20,6 +21,7 @@ export type BuiltInTexts = {
   languages: Record<string, string>;
   characters: string;
   hardWords: string;
+  hardPhrases: HardPhrase[];
 };
 
 function invalid(message: string): never {
@@ -37,6 +39,27 @@ function joinLines(value: unknown, field: string): unknown {
     return (value as string[]).join('\n');
   }
   return value;
+}
+
+/** Accept `{ text, reference }`, or a plain string that fills both fields. */
+function expandHardPhrases(value: unknown): HardPhrase[] {
+  if (!Array.isArray(value)) invalid('texts.hardPhrases must be a list');
+  return value.map((item, index) => {
+    if (typeof item === 'string') {
+      const text = item.trim();
+      if (!text) invalid(`texts.hardPhrases[${index}] must not be empty`);
+      return { text, reference: text };
+    }
+    if (!isRecord(item) || typeof item.text !== 'string')
+      invalid(`texts.hardPhrases[${index}] must be text or { text, reference }`);
+    const text = item.text.trim();
+    if (!text) invalid(`texts.hardPhrases[${index}].text must not be empty`);
+    const reference =
+      typeof item.reference === 'string' && item.reference.trim()
+        ? item.reference.trim()
+        : text;
+    return { text, reference };
+  });
 }
 
 /** A settings.json document in the full stored-defaults shape, before schema validation. */
@@ -69,6 +92,7 @@ export function expandSettingsFile(input: unknown): Record<string, unknown> {
       ...texts,
       paragraph: joinLines(texts.paragraph, 'paragraph'),
       hardWords: joinLines(texts.hardWords, 'hardWords'),
+      hardPhrases: expandHardPhrases(texts.hardPhrases),
     },
   });
 }

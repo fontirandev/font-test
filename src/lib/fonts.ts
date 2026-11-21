@@ -210,6 +210,40 @@ export function unloadFont(font: LoadedFont): void {
   document.fonts.delete(font.face);
 }
 
+/** Format controls and spaces are meant to be invisible when the font maps them. */
+function isInvisibleChar(ch: string): boolean {
+  const code = ch.codePointAt(0)!;
+  return (
+    /\s/u.test(ch) ||
+    code === 0x200c || // ZWNJ
+    code === 0x200d || // ZWJ
+    code === 0x200e || // LRM
+    code === 0x200f || // RLM
+    (code >= 0x202a && code <= 0x202e)
+  );
+}
+
+/**
+ * True when the character is unmapped (.notdef) or maps to a blank outline.
+ * Many fonts put empty glyphs on `$`, `€`, `\\`, … so index !== 0 is not enough.
+ */
+export function isMissingChar(font: Font, ch: string): boolean {
+  const index = font.charToGlyphIndex(ch);
+  if (index === 0) return true;
+  if (isInvisibleChar(ch)) return false;
+  try {
+    const path = font.glyphs.get(index).getPath(0, 0, font.unitsPerEm);
+    return !path.commands.some((command) => command.type !== 'M' && command.type !== 'Z');
+  } catch {
+    return true;
+  }
+}
+
+/** True when any character of `text` is missing from the font. */
+export function textHasMissingGlyph(font: Font, text: string): boolean {
+  return Array.from(text).some((ch) => isMissingChar(font, ch));
+}
+
 /** Explicit false values must disable a feature; omitting them restores browser defaults. */
 export function featureCSS(features: Record<string, boolean>, allowed: string[]): string {
   return (

@@ -4,7 +4,7 @@ SVG exports from the user-provided Figma file `kf79BgCl04FVQMubBYpac5`.
 
 | Asset           | Reference node / slot          | Intrinsic size                  |
 | --------------- | ------------------------------ | ------------------------------- |
-| logo.svg        | 1:17, 1:77                     | 65 × 32                         |
+| logo.svg        | 1:17, 1:77                     | 32 × 32                         |
 | moon.svg        | 1:20, 1:80                     | 24 × 24                         |
 | gear.svg        | 1:24, 1:84                     | 24 × 24                         |
 | info.svg        | 1:28, 1:88                     | 24 × 24                         |

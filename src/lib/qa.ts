@@ -1,4 +1,5 @@
 import type { Font } from 'opentype.js';
+import { isMissingChar } from './fonts';
 import type { LoadedFont } from './fonts';
 
 export type QaStatus = 'pass' | 'warn' | 'fail';
@@ -58,7 +59,7 @@ function coverage(
   chars: string[],
   failIfMissing: boolean,
 ): QaCheck {
-  const missing = chars.filter((ch) => parsed.charToGlyphIndex(ch) === 0);
+  const missing = chars.filter((ch) => isMissingChar(parsed, ch));
   if (!missing.length)
     return { group, title, detail: `همهٔ موارد موجود (${chars.length})`, status: 'pass' };
   return {

@@ -817,10 +817,19 @@
     padding-block: 0.15em;
     padding-inline: 8px;
   }
-  /* Typing cards: 15% of the preview font size above and below so ink is not clipped. */
+  /*
+   * Typing cards: padding on a wrapper (not the <input>). Inputs clip ink to the
+   * content box and ignore padding for glyph overflow, which cut off letters like گ.
+   */
+  .preview-text-frame {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
   .preview-card-compact .preview-text-line {
-    padding-block: 0.15em;
-    line-height: 1.4;
+    overflow: visible;
+    padding-block: 0;
+    padding-inline: 8px;
+    line-height: 1.6;
   }
   /* Keep a full-height line box before anything is typed, so cards don't jump. */
   .preview-text-line::after {

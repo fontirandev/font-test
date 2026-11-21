@@ -556,28 +556,33 @@ export function TestViews({
                 </h2>
               )}
               {tabId === 'typing-test' && (
-                <input
-                  type="text"
-                  className="preview-text preview-text-line preview-text-edit"
-                  style={{
-                    ...style,
-                    // 15% of the preview size above and below so tall glyphs are not clipped.
-                    paddingBlock: `${tab.controls.fontSize * 0.15}pt`,
-                  }}
-                  spellCheck={false}
-                  aria-label={`متن آزمایش — ${font.fileName}`}
-                  // Auto-typing shows a growing prefix; editing then would truncate the sample.
-                  value={typed ? segments.slice(0, position).join('') : tab.text}
-                  readOnly={typed}
-                  disabled={disabled}
-                  onChange={(e) => setTypingText(e.target.value)}
-                  ref={(el) => {
-                    // Keep the newest typed letter in view while typing.
-                    if (!el || !playing) return;
-                    const rtl = getComputedStyle(el).direction === 'rtl';
-                    el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
-                  }}
-                />
+                // Padding lives on the frame: <input> clips glyphs to its content box and
+                // ignores padding for ink, so tall letters were cut despite padding.
+                <div
+                  className="preview-text-frame"
+                  style={{ paddingBlock: `${tab.controls.fontSize * 0.15}pt` }}
+                >
+                  <input
+                    type="text"
+                    className="preview-text preview-text-line preview-text-edit"
+                    style={{ ...style, lineHeight: 1.6 }}
+                    spellCheck={false}
+                    aria-label={`متن آزمایش — ${font.fileName}`}
+                    // Auto-typing shows a growing prefix; editing then would truncate the sample.
+                    value={typed ? segments.slice(0, position).join('') : tab.text}
+                    readOnly={typed}
+                    disabled={disabled}
+                    onChange={(e) => setTypingText(e.target.value)}
+                    ref={(el) => {
+                      // Keep the newest typed letter in view while typing.
+                      if (!el || !playing) return;
+                      const frame = el.parentElement;
+                      if (!frame) return;
+                      const rtl = getComputedStyle(el).direction === 'rtl';
+                      frame.scrollLeft = rtl ? -frame.scrollWidth : frame.scrollWidth;
+                    }}
+                  />
+                </div>
               )}
               {tabId === 'languages' &&
                 languageSheets
@@ -595,7 +600,7 @@ export function TestViews({
                           {sample.id}
                         </span>
                       </h2>
-                      <p className="language-sample-main" style={style}>
+                      <p className="language-sample-main" style={{ ...style, direction: sample.dir }}>
                         {sample.text}
                       </p>
                       <p

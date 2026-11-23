@@ -73,7 +73,7 @@
   --control: var(--grey-800);
   --primary: var(--grey-200);
   --on-primary: var(--grey-950);
-  --active: #07332f;
+  --active: #9b3636;
   --disabled: var(--grey-900);
   --danger: #ff938a;
   --icon: var(--grey-100);
@@ -167,9 +167,6 @@
     mask-position: center;
     mask-repeat: no-repeat;
     mask-size: 100% 100%;
-  }
-  .icon-logo {
-    color: var(--ink);
   }
   .icon-gear,
   .icon-grip,

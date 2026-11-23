@@ -37,8 +37,9 @@ export const iconSizes: Record<IconName, [number, number]> = {
   add: [24, 24],
 };
 export const iconSrc = (name: IconName) => `/design/${name}.svg`;
-/** The one icon drawn as an <img>; every other icon is a CSS mask. */
-export const imageIcon: IconName = 'empty-fonts';
+/** Multi-colour assets drawn as <img>; everything else is a CSS mask. */
+export const imageIcons = new Set<IconName>(['logo', 'empty-fonts']);
+export const isImageIcon = (name: IconName) => imageIcons.has(name);
 
 /**
  * Fetch and decode every icon up front so icons that appear later (pause, moon,
@@ -60,10 +61,10 @@ export function preloadIcons() {
     link.as = 'image';
     link.href = href;
     link.type = 'image/svg+xml';
-    if (name !== imageIcon) link.crossOrigin = 'anonymous';
+    if (!isImageIcon(name)) link.crossOrigin = 'anonymous';
     document.head.append(link);
 
-    if (name === imageIcon) {
+    if (isImageIcon(name)) {
       const img = document.createElement('img');
       img.src = href;
       img.alt = '';

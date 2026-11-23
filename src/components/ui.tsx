@@ -7,21 +7,28 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from 'react';
-import { iconSizes, iconSrc, imageIcon, type IconName } from '../lib/icons';
+import { iconSizes, iconSrc, isImageIcon, type IconName } from '../lib/icons';
 
 export type { IconName };
 
 /**
  * Single-colour icons are drawn as CSS masks filled with currentColor so each
- * theme can colour them; the multi-tone illustration stays an image.
+ * theme can colour them; multi-colour assets (logo, empty-fonts) stay images.
  */
 export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
   const src = iconSrc(name);
-  if (name === imageIcon)
-    return (
-      <img src={src} alt="" draggable={false} className={`design-icon icon-${name} ${className}`} />
-    );
   const [width, height] = iconSizes[name];
+  if (isImageIcon(name))
+    return (
+      <img
+        src={src}
+        alt=""
+        width={width}
+        height={height}
+        draggable={false}
+        className={`design-icon icon-${name} ${className}`}
+      />
+    );
   return (
     <span
       aria-hidden="true"

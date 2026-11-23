@@ -574,12 +574,12 @@ export function TestViews({
                     disabled={disabled}
                     onChange={(e) => setTypingText(e.target.value)}
                     ref={(el) => {
-                      // Keep the newest typed letter in view while typing.
-                      if (!el || !playing) return;
-                      const frame = el.parentElement;
-                      if (!frame) return;
-                      const rtl = getComputedStyle(el).direction === 'rtl';
-                      frame.scrollLeft = rtl ? -frame.scrollWidth : frame.scrollWidth;
+                      // Keep the newest typed letter in view while auto-typing.
+                      if (!el || !typed) return;
+                      requestAnimationFrame(() => {
+                        const rtl = getComputedStyle(el).direction === 'rtl';
+                        el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
+                      });
                     }}
                   />
                 </div>

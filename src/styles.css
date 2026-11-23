@@ -817,13 +817,14 @@
   /*
    * Typing cards: padding on a wrapper (not the <input>). Inputs clip ink to the
    * content box and ignore padding for glyph overflow, which cut off letters like گ.
+   * Horizontal scroll stays on the input so auto-type can keep the caret in view.
    */
   .preview-text-frame {
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: visible;
   }
   .preview-card-compact .preview-text-line {
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: hidden;
     padding-block: 0;
     padding-inline: 8px;
     line-height: 1.6;

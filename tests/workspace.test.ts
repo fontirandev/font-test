@@ -48,7 +48,8 @@ test('the three text tabs keep every control in step', () => {
   assert.deepEqual(state.tabs.weights.controls.features, { kern: false, ss01: true });
   assert.equal(state.tabs.weights.controls.direction, 'ltr');
   assert.equal(state.tabs.weights.controls.alignment, 'start');
-  assert.deepEqual(state.tabs.languages.controls.features, {});
+  // Features are shared by every tab that offers them (including languages).
+  assert.deepEqual(state.tabs.languages.controls.features, { kern: false, ss01: true });
   state = workspaceReducer(state, {
     type: 'reset-tab',
     tab: 'weights',
@@ -57,7 +58,7 @@ test('the three text tabs keep every control in step', () => {
   assert.deepEqual(state.tabs['typing-test'].controls.features, {});
   assert.equal(state.tabs['paragraph'].controls.direction, 'rtl');
 });
-test('font size and variable axes are shared by every tab that offers them', () => {
+test('font size, axes and features are shared by every tab that offers them', () => {
   let state = workspaceReducer(setup(), {
     type: 'set-controls',
     tab: 'languages',
@@ -67,15 +68,19 @@ test('font size and variable axes are shared by every tab that offers them', () 
     const { controls } = state.tabs[id];
     if (supportsControl(id, 'fontSize')) assert.equal(controls.fontSize, 72, id);
     if (supportsControl(id, 'axes')) assert.deepEqual(controls.axes, { wght: 700, CNTR: 40 }, id);
+    if (supportsControl(id, 'features'))
+      assert.deepEqual(controls.features, { ss01: true }, id);
   }
-  // Features stay per tab.
-  assert.equal(state.tabs['typing-test'].controls.features.ss01, undefined);
+  // Tabs without letterforms / stylistic sets are unchanged.
+  assert.deepEqual(state.tabs.characters.controls.features, {});
+  assert.deepEqual(state.tabs.glyphs.controls.features, {});
   state = workspaceReducer(state, {
     type: 'reset-tab',
     tab: 'weights',
     defaults: createFactoryDefaults(),
   });
   assert.equal(state.tabs['typing-test'].controls.fontSize, 48);
+  assert.deepEqual(state.tabs['typing-test'].controls.features, {});
 });
 test('resetting a tab restores its settings but keeps its text', () => {
   let state = workspaceReducer(setup(), { type: 'set-text', tab: 'paragraph', text: 'متن من' });

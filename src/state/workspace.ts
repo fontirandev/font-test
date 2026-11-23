@@ -45,9 +45,9 @@ export function defaultText(id: TabId, defaults: AppDefaults): string {
 
 /**
  * Controls that follow the user across tabs: changing one in any tab changes it in
- * every tab that offers it. Everything else in `controls` stays per tab.
+ * every tab that offers it. Tabs without that control are left alone.
  */
-export const sharedControls = ['display', 'fontSize', 'axes'] as const;
+export const sharedControls = ['display', 'fontSize', 'axes', 'features'] as const;
 type SharedControl = (typeof sharedControls)[number];
 
 function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings> {
@@ -58,7 +58,7 @@ function pickShared(controls: Partial<PreviewSettings>): Partial<PreviewSettings
 
 /**
  * The text tabs are one workspace for testing a sample: every control changed in
- * one of them (letterforms, direction, alignment…) carries over to the others.
+ * one of them (direction, alignment…) carries over to the others.
  */
 export const linkedTabs: readonly TabId[] = ['typing-test', 'paragraph', 'weights'];
 
@@ -206,7 +206,13 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
         sharedDefaults(action.defaults),
       );
       if (linkedTabs.includes(action.tab)) {
-        const { fontSize: _size, display: _display, axes: _axes, ...own } = defaults.controls;
+        const {
+          fontSize: _size,
+          display: _display,
+          axes: _axes,
+          features: _features,
+          ...own
+        } = defaults.controls;
         tabs = applyShared(tabs, own, linkedTabs);
       }
       return { ...state, tabs };

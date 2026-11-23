@@ -101,14 +101,19 @@ export function readStoredWorkspace(defaults: AppDefaults): Workspace {
         },
       } satisfies TabSession;
     }
-    // Axis values are one setting for every tab: snapshots from before that rule (or
-    // from before a tab supported axes) take the open tab's values everywhere.
+    // Shared controls are one setting for every tab that offers them: snapshots from
+    // before that rule take the open tab's values everywhere those controls exist.
     const currentTab = isTabId(saved.currentTab) ? saved.currentTab : fallback.currentTab;
-    const axesSource = supportsControl(currentTab, 'axes') ? currentTab : tabIds[0];
-    const axes = tabs[axesSource].controls.axes;
+    const sharedSource = (control: 'axes' | 'features') =>
+      supportsControl(currentTab, control) ? currentTab : tabIds[0];
+    const axes = tabs[sharedSource('axes')].controls.axes;
+    const features = tabs[sharedSource('features')].controls.features;
     for (const id of tabIds) {
-      if (supportsControl(id, 'axes')) {
-        tabs[id] = { ...tabs[id], controls: { ...tabs[id].controls, axes } };
+      const patch: Partial<(typeof tabs)[TabId]['controls']> = {};
+      if (supportsControl(id, 'axes')) patch.axes = axes;
+      if (supportsControl(id, 'features')) patch.features = features;
+      if (Object.keys(patch).length) {
+        tabs[id] = { ...tabs[id], controls: { ...tabs[id].controls, ...patch } };
       }
     }
     return {

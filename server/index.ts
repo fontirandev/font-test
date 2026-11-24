@@ -56,6 +56,8 @@ server.on('request', (request, response) => {
     }
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
+    // Keep every response (pages, fonts, images) out of search indexes.
+    response.setHeader('X-Robots-Tag', 'noindex, nofollow');
     const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`);
     if (vite) {
       vite.middlewares(request, response);

@@ -18,7 +18,7 @@ export type IconName =
   | 'add';
 /** Intrinsic sizes of the SVGs in public/design. */
 export const iconSizes: Record<IconName, [number, number]> = {
-  logo: [66, 32],
+  logo: [99, 32],
   sun: [48, 48],
   moon: [24, 24],
   gear: [24, 24],
@@ -55,21 +55,25 @@ export function preloadIcons() {
   sprite.style.cssText =
     'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
   for (const name of Object.keys(iconSizes) as IconName[]) {
-    const href = iconSrc(name);
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'image';
-    link.href = href;
-    link.type = 'image/svg+xml';
-    if (!isImageIcon(name)) link.crossOrigin = 'anonymous';
-    document.head.append(link);
+    const hrefs = name === 'logo' ? ['/design/logo-light.png', '/design/logo-dark.png'] : [iconSrc(name)];
+    for (const href of hrefs) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = href;
+      link.type = name === 'logo' ? 'image/png' : 'image/svg+xml';
+      if (!isImageIcon(name)) link.crossOrigin = 'anonymous';
+      document.head.append(link);
 
-    if (isImageIcon(name)) {
-      const img = document.createElement('img');
-      img.src = href;
-      img.alt = '';
-      sprite.append(img);
-    } else {
+      if (isImageIcon(name)) {
+        const img = document.createElement('img');
+        img.src = href;
+        img.alt = '';
+        sprite.append(img);
+      }
+    }
+    if (!isImageIcon(name)) {
+      const href = iconSrc(name);
       const span = document.createElement('span');
       span.style.cssText = `display:block;width:1px;height:1px;mask-image:url(${href});-webkit-mask-image:url(${href})`;
       sprite.append(span);

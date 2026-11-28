@@ -275,6 +275,9 @@ export function App() {
               <div
                 className="panel empty-panel"
                 data-dragging={emptyDragging}
+                onClick={() => {
+                  if (!loading) openPicker();
+                }}
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = 'copy';
@@ -299,7 +302,6 @@ export function App() {
                     label="افزودن فونت"
                     variant="primary"
                     disabled={loading}
-                    onClick={openPicker}
                   />
                   <span>را اضافه کنید</span>
                 </div>
@@ -341,11 +343,11 @@ export function App() {
             beta 1.0
           </p>
           <p className="leading-8">
-            این نرم‌افزار، پیش‌تر برای بررسی و آزمایش فونت‌های منتشرشده در
+            این نرم‌افزار، در ابتدا برای کنترل کیفی فونت‌ها در{' '}
             <a className="about-link" href={links.fontiran} target="_blank" rel="noreferrer">
               فونت‌ایران
             </a>{' '}
-            استفاده می‌شد و اکنون به‌صورت متن‌باز در دسترس عموم قرار گرفته است.
+            ساخته شد و اکنون به‌صورت متن‌باز در دسترس عموم قرار گرفته است.
           </p>
           <p className="about-privacy mt-4 leading-8">
             <strong>حریم خصوصی شما محفوظ است.</strong> همه‌چیز در مرورگر خودتان اجرا می‌شود و

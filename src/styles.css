@@ -204,12 +204,6 @@
   }
   .brand .icon-logo {
     margin-left: auto;
-    height: 32px;
-    width: auto;
-  }
-  :root[data-theme='dark'] .logo-for-light,
-  :root:not([data-theme='dark']) .logo-for-dark {
-    display: none;
   }
   .tab-rail {
     display: flex;

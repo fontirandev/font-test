@@ -18,27 +18,6 @@ export type { IconName };
 export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
   const src = iconSrc(name);
   const [width, height] = iconSizes[name];
-  if (name === 'logo')
-    return (
-      <>
-        <img
-          src="/design/logo-light.png"
-          alt=""
-          width={99}
-          height={32}
-          draggable={false}
-          className={`design-icon icon-logo logo-for-light ${className}`}
-        />
-        <img
-          src="/design/logo-dark.png"
-          alt=""
-          width={99}
-          height={32}
-          draggable={false}
-          className={`design-icon icon-logo logo-for-dark ${className}`}
-        />
-      </>
-    );
   if (isImageIcon(name))
     return (
       <img

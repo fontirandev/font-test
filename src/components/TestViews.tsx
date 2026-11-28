@@ -222,6 +222,70 @@ function WeightsOverlay({
   );
 }
 
+/**
+ * One typing-tab line. The input grows to its text and the frame scrolls, so a
+ * large size shows a horizontal bar on the card instead of spilling out of it.
+ */
+function TypingLine({
+  style,
+  fontSize,
+  value,
+  label,
+  readOnly,
+  disabled,
+  followEnd,
+  onChange,
+}: {
+  style: CSSProperties;
+  fontSize: number;
+  value: string;
+  label: string;
+  readOnly: boolean;
+  disabled: boolean;
+  /** Keep the newest auto-typed letter in view. */
+  followEnd: boolean;
+  onChange: (value: string) => void;
+}) {
+  const frame = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    const box = frame.current;
+    const field = input.current;
+    if (!box || !field) return;
+    const fit = () => {
+      field.style.width = '100%';
+      const overflows = field.scrollWidth > field.clientWidth + 1;
+      field.style.width = overflows ? `${field.scrollWidth}px` : '100%';
+      if (!followEnd) return;
+      const rtl = getComputedStyle(field).direction === 'rtl';
+      box.scrollLeft = rtl ? -box.scrollWidth : box.scrollWidth;
+    };
+    fit();
+    document.fonts.addEventListener('loadingdone', fit);
+    return () => document.fonts.removeEventListener('loadingdone', fit);
+  }, [value, style, fontSize, followEnd]);
+  return (
+    <div
+      className="preview-text-frame"
+      ref={frame}
+      style={{ paddingBlock: `${fontSize * 0.15}pt` }}
+    >
+      <input
+        ref={input}
+        type="text"
+        className="preview-text preview-text-line preview-text-edit"
+        style={{ ...style, lineHeight: 1.6 }}
+        spellCheck={false}
+        aria-label={label}
+        value={value}
+        readOnly={readOnly}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
+}
+
 export function TestViews({
   tabId,
   tab,
@@ -556,33 +620,17 @@ export function TestViews({
                 </h2>
               )}
               {tabId === 'typing-test' && (
-                // Padding lives on the frame: <input> clips glyphs to its content box and
-                // ignores padding for ink, so tall letters were cut despite padding.
-                <div
-                  className="preview-text-frame"
-                  style={{ paddingBlock: `${tab.controls.fontSize * 0.15}pt` }}
-                >
-                  <input
-                    type="text"
-                    className="preview-text preview-text-line preview-text-edit"
-                    style={{ ...style, lineHeight: 1.6 }}
-                    spellCheck={false}
-                    aria-label={`متن آزمایش — ${font.fileName}`}
-                    // Auto-typing shows a growing prefix; editing then would truncate the sample.
-                    value={typed ? segments.slice(0, position).join('') : tab.text}
-                    readOnly={typed}
-                    disabled={disabled}
-                    onChange={(e) => setTypingText(e.target.value)}
-                    ref={(el) => {
-                      // Keep the newest typed letter in view while auto-typing.
-                      if (!el || !typed) return;
-                      requestAnimationFrame(() => {
-                        const rtl = getComputedStyle(el).direction === 'rtl';
-                        el.scrollLeft = rtl ? -el.scrollWidth : el.scrollWidth;
-                      });
-                    }}
-                  />
-                </div>
+                <TypingLine
+                  style={style}
+                  fontSize={tab.controls.fontSize}
+                  label={`متن آزمایش — ${font.fileName}`}
+                  // Auto-typing shows a growing prefix; editing then would truncate the sample.
+                  value={typed ? segments.slice(0, position).join('') : tab.text}
+                  readOnly={typed}
+                  disabled={disabled}
+                  followEnd={typed}
+                  onChange={setTypingText}
+                />
               )}
               {tabId === 'languages' &&
                 languageSheets

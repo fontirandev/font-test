@@ -204,6 +204,12 @@
   }
   .brand .icon-logo {
     margin-left: auto;
+    height: 32px;
+    width: auto;
+  }
+  :root[data-theme='dark'] .logo-for-light,
+  :root:not([data-theme='dark']) .logo-for-dark {
+    display: none;
   }
   .tab-rail {
     display: flex;
@@ -570,6 +576,7 @@
     height: 450px;
     position: relative;
     text-align: center;
+    cursor: pointer;
   }
   .empty-dropzone {
     position: absolute;
@@ -817,14 +824,26 @@
   /*
    * Typing cards: padding on a wrapper (not the <input>). Inputs clip ink to the
    * content box and ignore padding for glyph overflow, which cut off letters like گ.
-   * Horizontal scroll stays on the input so auto-type can keep the caret in view.
+   * The input is sized to its text; this frame scrolls sideways when that is wider
+   * than the card.
    */
   .preview-text-frame {
-    overflow: visible;
-  }
-  .preview-card-compact .preview-text-line {
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-control) transparent;
+  }
+  .preview-text-frame::-webkit-scrollbar {
+    height: 6px;
+  }
+  .preview-text-frame::-webkit-scrollbar-thumb {
+    background: var(--border-control);
+  }
+  .preview-text-frame::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .preview-card-compact .preview-text-line {
+    overflow: hidden;
     padding-block: 0;
     padding-inline: 8px;
     line-height: 1.6;
